@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
 import '../services/call_service.dart';
 import '../services/profile_service.dart';
@@ -12,16 +13,75 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final search = TextEditingController();
   Timer? debounce;
+  RealtimeChannel? incomingChannel;
+  final Set<String> handledCalls = {};
   List<Map<String, dynamic>> users = [];
   Map<String, dynamic>? me;
   bool loading = false;
   String? error;
-  @override void initState() { super.initState(); loadMe(); }
-  @override void dispose() { debounce?.cancel(); search.dispose(); super.dispose(); }
+  @override void initState() { super.initState(); loadMe(); listenForIncomingCalls(); }
+  @override void dispose() {
+    debounce?.cancel(); search.dispose();
+    if (incomingChannel != null) Supabase.instance.client.removeChannel(incomingChannel!);
+    super.dispose();
+  }
 
   Future<void> loadMe() async {
     try { final p = await ProfileService.instance.myProfile(); if (mounted) setState(() => me = p); } catch (_) {}
   }
+
+  void listenForIncomingCalls() {
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) return;
+    incomingChannel = Supabase.instance.client.channel('hicall-incoming-$userId')
+      .onPostgresChanges(
+        event: PostgresChangeEvent.insert, schema: 'public', table: 'call_participants',
+        filter: PostgresChangeFilter(type: PostgresChangeFilterType.eq, column: 'user_id', value: userId),
+        callback: (payload) {
+          final id = payload.newRecord['call_id'] as String?;
+          if (id != null) handleIncomingCall(id);
+        },
+      ).subscribe();
+  }
+
+  Future<void> handleIncomingCall(String callId) async {
+    if (!mounted || handledCalls.contains(callId)) return;
+    handledCalls.add(callId);
+    try {
+      final client = Supabase.instance.client;
+      final call = await client.from('call_sessions').select('id, created_by, call_type, status')
+        .eq('id', callId).maybeSingle();
+      if (call == null || call['status'] != 'ringing' || call['created_by'] == client.auth.currentUser?.id) return;
+      final caller = await client.from('profiles').select('username, display_name')
+        .eq('id', call['created_by']).maybeSingle();
+      if (!mounted) return;
+      final callerName = (caller?['display_name'] as String?)?.isNotEmpty == true
+        ? caller!['display_name'] as String : (caller?['username'] as String? ?? 'HiCALL user');
+      final isVideo = call['call_type'] == 'video';
+      final accepted = await showDialog<bool>(
+        context: context, barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(isVideo ? 'Incoming video call' : 'Incoming audio call'),
+          content: Text('$callerName is calling you.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Decline')),
+            ElevatedButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Accept')),
+          ],
+        ),
+      );
+      if (!mounted) return;
+      if (accepted == true) {
+        final credentials = await CallService.instance.joinCall(callId);
+        if (!mounted) return;
+        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => CallScreen(credentials: credentials, remoteName: callerName)));
+      } else {
+        await CallService.instance.declineCall(callId);
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Incoming call error: $e')));
+    }
+  }
+
   void onSearch(String value) {
     debounce?.cancel();
     debounce = Timer(const Duration(milliseconds: 350), () => searchUsers(value));
