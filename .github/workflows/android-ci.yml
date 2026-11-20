@@ -75,11 +75,13 @@ jobs:
           flutter pub get
           dart run flutter_launcher_icons
 
-      - name: Format Dart source
-        run: dart format lib test
+      - name: Apply Dart quick fixes and format
+        run: |
+          dart fix --apply
+          dart format lib test
 
       - name: Static analysis
-        run: flutter analyze
+        run: flutter analyze --fatal-infos
 
       - name: Unit tests
         run: flutter test --no-pub
