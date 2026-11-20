@@ -37,7 +37,7 @@ These must belong to a separate HiCALL LiveKit project. Never reuse NightLink's 
 
 ## Android CI
 
-The GitHub Actions workflow `.github/workflows/android-ci.yml` formats, analyzes, tests, and builds a debug APK. The workflow does not create a production release.
+The GitHub Actions workflow `.github/workflows/android-ci.yml` formats, analyzes, tests, and builds both debug and release-variant APK artifacts. The release-variant artifact uses the generated Android project's debug signing configuration unless a private release keystore is configured; it is suitable for installation/testing but is not a Play Store production-signed release. Configure a private upload keystore through GitHub Actions secrets before publishing.
 
 ## Quality gates
 
