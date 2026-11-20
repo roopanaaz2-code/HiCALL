@@ -21,7 +21,7 @@ class _CallScreenState extends State<CallScreen> {
       if (!mic.isGranted) { throw Exception('Microphone permission is required.'); }
       if (widget.credentials.callType == 'video') {
         final camera = await Permission.camera.request();
-        if (!camera.isGranted) throw Exception('Camera permission is required for video calls.');
+        if (!camera.isGranted) { throw Exception('Camera permission is required for video calls.'); }
       }
       await room.connect(widget.credentials.serverUrl, widget.credentials.token);
       await room.localParticipant?.setMicrophoneEnabled(true);
