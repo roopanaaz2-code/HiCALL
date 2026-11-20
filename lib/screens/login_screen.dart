@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -15,9 +16,11 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() { busy = true; error = null; notice = null; });
     try {
       if (register) {
+        if (!RegExp(r'^[A-Za-z0-9_]{3,24}$').hasMatch(username.text.trim())) {
+          throw Exception('Username must be 3–24 characters using letters, numbers or underscore.');
+        }
         await AuthService.instance.signUp(email: email.text, password: password.text, username: username.text, displayName: displayName.text);
-        if (AuthService.instance.currentUser != null && mounted) setState(() => notice = 'Account created. You can now sign in.');
-        else if (mounted) setState(() => notice = 'Check your email to confirm your account, then sign in.');
+        if (mounted) setState(() => notice = 'Check your email to confirm your account, then sign in.');
       } else {
         await AuthService.instance.signIn(email.text, password.text);
       }
@@ -28,7 +31,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override Widget build(BuildContext context) => Scaffold(body: SafeArea(child: Center(child: SingleChildScrollView(
     padding: const EdgeInsets.all(26), child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 440), child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        const Icon(Icons.call_rounded, size: 76, color: Color(0xFF16D5F4)),
+        SvgPicture.asset('assets/hicall_icon.svg', width: 116, height: 116),
         const SizedBox(height: 12),
         const Text('HiCALL', textAlign: TextAlign.center, style: TextStyle(fontSize: 34, fontWeight: FontWeight.w800, letterSpacing: 2)),
         const SizedBox(height: 8), Text(register ? 'Create your calling account' : 'Clear calls. Simple connections.', textAlign: TextAlign.center),
