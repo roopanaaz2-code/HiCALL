@@ -39,7 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
         filter: PostgresChangeFilter(type: PostgresChangeFilterType.eq, column: 'user_id', value: userId),
         callback: (payload) {
           final id = payload.newRecord['call_id'] as String?;
-          if (id != null) handleIncomingCall(id);
+          if (id != null) { handleIncomingCall(id); }
         },
       ).subscribe();
   }
