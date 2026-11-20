@@ -35,6 +35,16 @@ These must belong to a separate HiCALL LiveKit project. Never reuse NightLink's 
 - The current call screen connects to LiveKit and toggles local microphone/camera. Remote video rendering and robust call-state recovery still need implementation and device testing.
 - The call service returns a configuration error until the HiCALL LiveKit secrets are installed.
 
+## Email confirmation deep link
+
+HiCALL sends Supabase signup confirmation emails back to the Android app using
+`hicall://auth-callback`. The Android build registers this scheme/host and
+`supabase_flutter` processes the returned auth callback to establish the verified
+session. In Supabase Dashboard, add the exact URL
+`hicall://auth-callback` under Authentication > URL Configuration > Redirect URLs.
+Keep email confirmations enabled. Do not set the Site URL or email redirect to
+`http://localhost:3000` for this Android app.
+
 ## Android CI
 
 The GitHub Actions workflow `.github/workflows/android-ci.yml` formats, analyzes, tests, and builds both debug and release-variant APK artifacts. The release-variant artifact uses the generated Android project's debug signing configuration unless a private release keystore is configured; it is suitable for installation/testing but is not a Play Store production-signed release. Configure a private upload keystore through GitHub Actions secrets before publishing.
