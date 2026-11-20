@@ -65,7 +65,7 @@ jobs:
                           <data android:scheme="hicall" android:host="auth-callback" />
                       </intent-filter>"""
           if 'android:scheme="hicall"' not in s:
-              s = s.replace("</activity>", deep_link + "\\n        </activity>", 1)
+              s = s.replace("</activity>", deep_link + "\n        </activity>", 1)
           p.write_text(s)
           gradle = Path("android/app/build.gradle.kts")
           if gradle.exists():
