@@ -15,16 +15,29 @@ class CallService {
   static final instance = CallService._();
   final _client = Supabase.instance.client;
 
-  Future<CallCredentials> startCall({required String recipientId, required String callType}) async {
-    final response = await _client.functions.invoke(AppConfig.callControlFunction,
-      body: {'action': 'start', 'recipient_id': recipientId, 'call_type': callType});
-    if (response.status < 200 || response.status >= 300) throw Exception('Call request failed (${response.status}).');
+  Future<CallCredentials> _invoke(Map<String, dynamic> body) async {
+    final response = await _client.functions.invoke(AppConfig.callControlFunction, body: body);
+    if (response.status < 200 || response.status >= 300) {
+      final message = response.data is Map ? (response.data as Map)['error'] : null;
+      throw Exception(message ?? 'Call request failed (${response.status}).');
+    }
     return CallCredentials.fromJson(Map<String, dynamic>.from(response.data as Map));
+  }
+
+  Future<CallCredentials> startCall({required String recipientId, required String callType}) =>
+    _invoke({'action': 'start', 'recipient_id': recipientId, 'call_type': callType});
+
+  Future<CallCredentials> joinCall(String callId) => _invoke({'action': 'join', 'call_id': callId});
+
+  Future<void> declineCall(String callId) async {
+    final response = await _client.functions.invoke(AppConfig.callControlFunction,
+      body: {'action': 'decline', 'call_id': callId});
+    if (response.status < 200 || response.status >= 300) throw Exception('Unable to decline call.');
   }
 
   Future<void> endCall(String callId) async {
     final response = await _client.functions.invoke(AppConfig.callControlFunction,
       body: {'action': 'end', 'call_id': callId});
-    if (response.status < 200 || response.status >= 300) throw Exception('Could not end call (${response.status}).');
+    if (response.status < 200 || response.status >= 300) throw Exception('Could not end call.');
   }
 }
