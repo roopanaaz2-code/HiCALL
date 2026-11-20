@@ -20,7 +20,7 @@ class _LoginScreenState extends State<LoginScreen> {
           throw Exception('Username must be 3–24 characters using letters, numbers or underscore.');
         }
         await AuthService.instance.signUp(email: email.text, password: password.text, username: username.text, displayName: displayName.text);
-        if (mounted) { setState(() => notice = 'Check your email to confirm your account, then sign in.'); }
+        if (mounted) { setState(() => notice = 'Confirmation email sent. Open it on this device; the link will return to HiCALL automatically.'); }
       } else {
         await AuthService.instance.signIn(email.text, password.text);
       }
