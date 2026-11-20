@@ -18,7 +18,7 @@ class _CallScreenState extends State<CallScreen> {
   Future<void> connect() async {
     try {
       final mic = await Permission.microphone.request();
-      if (!mic.isGranted) throw Exception('Microphone permission is required.');
+      if (!mic.isGranted) { throw Exception('Microphone permission is required.'); }
       if (widget.credentials.callType == 'video') {
         final camera = await Permission.camera.request();
         if (!camera.isGranted) throw Exception('Camera permission is required for video calls.');
@@ -29,26 +29,26 @@ class _CallScreenState extends State<CallScreen> {
         await room.localParticipant?.setCameraEnabled(true);
         cameraOn = true;
       }
-      if (mounted) setState(() { connected = true; connecting = false; });
-    } catch (e) { if (mounted) setState(() { error = e.toString(); connecting = false; }); }
+      if (mounted) { setState(() { connected = true; connecting = false; }); }
+    } catch (e) { if (mounted) { setState(() { error = e.toString(); connecting = false; }); } }
   }
 
   Future<void> toggleMic() async {
     final next = !muted;
     await room.localParticipant?.setMicrophoneEnabled(!next);
-    if (mounted) setState(() => muted = next);
+    if (mounted) { setState(() => muted = next); }
   }
   Future<void> toggleCamera() async {
     final next = !cameraOn;
     await room.localParticipant?.setCameraEnabled(next);
-    if (mounted) setState(() => cameraOn = next);
+    if (mounted) { setState(() => cameraOn = next); }
   }
   Future<void> hangUp() async {
-    if (ending) return;
+    if (ending) { return; }
     setState(() => ending = true);
     try { await room.disconnect(); } catch (_) {}
     try { await CallService.instance.endCall(widget.credentials.callId); } catch (_) {}
-    if (mounted) Navigator.of(context).pop();
+    if (mounted) { Navigator.of(context).pop(); }
   }
   @override void dispose() { room.dispose(); super.dispose(); }
 
