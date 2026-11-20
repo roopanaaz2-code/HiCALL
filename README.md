@@ -35,6 +35,10 @@ These must belong to a separate HiCALL LiveKit project. Never reuse NightLink's 
 - The current call screen connects to LiveKit and toggles local microphone/camera. Remote video rendering and robust call-state recovery still need implementation and device testing.
 - The call service returns a configuration error until the HiCALL LiveKit secrets are installed.
 
+## Android CI
+
+The GitHub Actions workflow `.github/workflows/android-ci.yml` formats, analyzes, tests, and builds a debug APK. The workflow does not create a production release.
+
 ## Quality gates
 
 A successful compile is not proof that calling works. Before a production release, test with at least two real Android devices and separate accounts:
