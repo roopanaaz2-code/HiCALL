@@ -1,51 +1,53 @@
 # HiCALL
 
-HiCALL is an Android-first calling app. Its scope is deliberately limited to communication calls.
+HiCALL is an Android-first app focused only on secure audio and video calling.
 
-## Product scope
+## Included scope
 
-- Secure account registration and sign-in
-- User profile and username lookup
-- One-to-one audio and video calls
-- Group audio and video calls
-- Incoming-call accept/decline notifications
-- In-call microphone, camera, speaker, and camera-switch controls
-- Call history and missed-call records
-- Block/report controls
-- Network-quality handling and call reconnection
+- Email/password registration and sign-in through Supabase Auth
+- Username and display-name profiles
+- Search for other registered users
+- One-to-one audio and video call setup
+- LiveKit room connection and microphone/camera controls
+- Foreground incoming-call prompts using Supabase Realtime
+- Accept, decline, and end call actions
+- Database foundations for call history, blocking, and user reports
+- Custom neon-blue HiCALL brand icon
 
 Out of scope: chat rooms, voice rooms, social feeds, stories, livestreaming, gifts, coins, battles, random matching, and unrelated social features.
 
-## Engineering approach
+## Backend
 
-- Flutter Android client
-- LiveKit/WebRTC-based real-time media with encrypted transport
-- Authenticated server-side call signalling and authorization
-- No API secrets embedded in the mobile application
-- Database row-level security for user and call records
-- Push notifications must contain only the minimum information needed to route an incoming call
-- Runtime permissions requested only when the relevant call feature is used
+A dedicated Supabase project has been provisioned for HiCALL in `ap-south-1` (Mumbai). The initial schema, row-level security policies, profile-on-signup trigger, and Realtime publication for call participants are applied.
 
-The media provider and backend must be configured with a dedicated HiCALL project. Credentials from another app must not be copied into this repository.
+The deployed `call-control` Edge Function verifies the user's Supabase session, checks block relationships, creates call records, and issues short-lived LiveKit access tokens. It requires these server-side secrets before call setup can work:
+
+- `LIVEKIT_URL`
+- `LIVEKIT_API_KEY`
+- `LIVEKIT_API_SECRET`
+
+These must belong to a separate HiCALL LiveKit project. Never reuse NightLink's credentials and never place LiveKit secrets or the Supabase service-role key in the Android app or GitHub source.
+
+## Current implementation limits
+
+- Incoming-call prompts currently work only while the app is open and connected to Realtime. Background/terminated-app incoming calls still need Firebase Cloud Messaging and Android call-notification integration.
+- The current UI supports direct one-to-one calls. Group calling, call history UI, profile editing, block/report UI, and full Android audio-routing/foreground-service handling remain to be implemented.
+- The current call screen connects to LiveKit and toggles local microphone/camera. Remote video rendering and robust call-state recovery still need implementation and device testing.
+- The call service returns a configuration error until the HiCALL LiveKit secrets are installed.
 
 ## Quality gates
 
-A release is not considered ready merely because it compiles. Before calling a build production-ready, verify:
+A successful compile is not proof that calling works. Before a production release, test with at least two real Android devices and separate accounts:
 
-1. Registration, login, logout, and session expiry
-2. Permission denial and later permission recovery
-3. Real audio and video between two separate devices/accounts
-4. Incoming calls while foregrounded and backgrounded
-5. Accept, decline, hang up, mute, speaker routing, and camera switching
-6. Wi-Fi/mobile-data changes, weak networks, reconnect, and call cleanup
-7. Group-call participant limits and media behavior
-8. Block/report authorization and database access policies
-9. Android installation, launch, and regression checks
+1. Sign-up, email confirmation, sign-in, and session expiry
+2. Username uniqueness and profile privacy
+3. Audio/video permissions, denial, and recovery
+4. Real two-way audio and video on separate networks
+5. Incoming call, accept, decline, hang-up, and simultaneous calls
+6. Bluetooth, speaker, earpiece, mute, camera switch, and echo handling
+7. Wi-Fi/mobile-data changes, weak network, reconnect, and cleanup
+8. Background/terminated incoming-call delivery and Android 13+ notifications
+9. Database RLS, block enforcement, abuse controls, and server-side authorization
+10. APK installation and regression checks on supported Android versions
 
-## Current status
-
-Repository initialized with the product scope and implementation/security gates. App source, backend configuration, and release workflow are not yet present. Do not treat this repository as a working calling app until the above functionality is implemented and tested.
-
-## Build prerequisites
-
-A dedicated HiCALL backend/media project and its public client configuration are required. Private signing keys and server secrets must be stored in GitHub Actions secrets or the backend secret store, never committed to source control.
+Do not describe an APK as production-ready until these tests pass.
