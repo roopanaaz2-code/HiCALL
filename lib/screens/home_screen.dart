@@ -22,7 +22,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override void initState() { super.initState(); loadMe(); listenForIncomingCalls(); }
   @override void dispose() {
     debounce?.cancel(); search.dispose();
-    if (incomingChannel != null) Supabase.instance.client.removeChannel(incomingChannel!);
+    if (incomingChannel != null) { Supabase.instance.client.removeChannel(incomingChannel!); }
     super.dispose();
   }
 
