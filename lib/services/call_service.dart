@@ -32,12 +32,12 @@ class CallService {
   Future<void> declineCall(String callId) async {
     final response = await _client.functions.invoke(AppConfig.callControlFunction,
       body: {'action': 'decline', 'call_id': callId});
-    if (response.status < 200 || response.status >= 300) throw Exception('Unable to decline call.');
+    if (response.status < 200 || response.status >= 300) { throw Exception('Unable to decline call.'); }
   }
 
   Future<void> endCall(String callId) async {
     final response = await _client.functions.invoke(AppConfig.callControlFunction,
       body: {'action': 'end', 'call_id': callId});
-    if (response.status < 200 || response.status >= 300) throw Exception('Could not end call.');
+    if (response.status < 200 || response.status >= 300) { throw Exception('Could not end call.'); }
   }
 }
