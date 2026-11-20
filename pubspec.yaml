@@ -3,11 +3,12 @@ description: HiCALL secure audio and video calling app.
 publish_to: "none"
 version: 1.0.0+1
 environment:
-  sdk: ">=3.5.0 <4.0.0"
+  sdk: ">=3.13.0 <4.0.0"
 dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
+  material_ui: ^1.11.1
   supabase_flutter: ^2.10.3
   livekit_client: ^2.5.2
   permission_handler: ^12.0.1
