@@ -32,7 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void listenForIncomingCalls() {
     final userId = Supabase.instance.client.auth.currentUser?.id;
-    if (userId == null) return;
+    if (userId == null) { return; }
     incomingChannel = Supabase.instance.client.channel('hicall-incoming-$userId')
       .onPostgresChanges(
         event: PostgresChangeEvent.insert, schema: 'public', table: 'call_participants',
@@ -45,16 +45,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> handleIncomingCall(String callId) async {
-    if (!mounted || handledCalls.contains(callId)) return;
+    if (!mounted || handledCalls.contains(callId)) { return; }
     handledCalls.add(callId);
     try {
       final client = Supabase.instance.client;
       final call = await client.from('call_sessions').select('id, created_by, call_type, status')
         .eq('id', callId).maybeSingle();
-      if (call == null || call['status'] != 'ringing' || call['created_by'] == client.auth.currentUser?.id) return;
+      if (call == null || call['status'] != 'ringing' || call['created_by'] == client.auth.currentUser?.id) { return; }
       final caller = await client.from('profiles').select('username, display_name')
         .eq('id', call['created_by']).maybeSingle();
-      if (!mounted) return;
+      if (!mounted) { return; }
       final callerName = (caller?['display_name'] as String?)?.isNotEmpty == true
         ? caller!['display_name'] as String : (caller?['username'] as String? ?? 'HiCALL user');
       final isVideo = call['call_type'] == 'video';
@@ -69,16 +69,16 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       );
-      if (!mounted) return;
+      if (!mounted) { return; }
       if (accepted == true) {
         final credentials = await CallService.instance.joinCall(callId);
-        if (!mounted) return;
+        if (!mounted) { return; }
         await Navigator.of(context).push(MaterialPageRoute(builder: (_) => CallScreen(credentials: credentials, remoteName: callerName)));
       } else {
         await CallService.instance.declineCall(callId);
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Incoming call error: $e')));
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Incoming call error: $e'))); }
     }
   }
 
@@ -87,19 +87,19 @@ class _HomeScreenState extends State<HomeScreen> {
     debounce = Timer(const Duration(milliseconds: 350), () => searchUsers(value));
   }
   Future<void> searchUsers(String value) async {
-    if (value.trim().length < 3) { if (mounted) setState(() { users = []; error = null; }); return; }
+    if (value.trim().length < 3) { if (mounted) { setState(() { users = []; error = null; }); } return; }
     setState(() { loading = true; error = null; });
-    try { final result = await ProfileService.instance.searchUsers(value); if (mounted) setState(() => users = result); }
-    catch (e) { if (mounted) setState(() => error = e.toString()); }
-    finally { if (mounted) setState(() => loading = false); }
+    try { final result = await ProfileService.instance.searchUsers(value); if (mounted) { setState(() => users = result); } }
+    catch (e) { if (mounted) { setState(() => error = e.toString()); } }
+    finally { if (mounted) { setState(() => loading = false); } }
   }
   Future<void> startCall(Map<String, dynamic> user, String type) async {
     try {
       final credentials = await CallService.instance.startCall(recipientId: user['id'] as String, callType: type);
-      if (!mounted) return;
+      if (!mounted) { return; }
       await Navigator.of(context).push(MaterialPageRoute(builder: (_) =>
         CallScreen(credentials: credentials, remoteName: (user['display_name'] as String?)?.isNotEmpty == true ? user['display_name'] as String : user['username'] as String)));
-    } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unable to start call: $e'))); }
+    } catch (e) { if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unable to start call: $e'))); } }
   }
 
   @override Widget build(BuildContext context) => Scaffold(
