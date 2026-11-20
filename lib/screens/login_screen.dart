@@ -20,12 +20,12 @@ class _LoginScreenState extends State<LoginScreen> {
           throw Exception('Username must be 3–24 characters using letters, numbers or underscore.');
         }
         await AuthService.instance.signUp(email: email.text, password: password.text, username: username.text, displayName: displayName.text);
-        if (mounted) setState(() => notice = 'Check your email to confirm your account, then sign in.');
+        if (mounted) { setState(() => notice = 'Check your email to confirm your account, then sign in.'); }
       } else {
         await AuthService.instance.signIn(email.text, password.text);
       }
-    } catch (e) { if (mounted) setState(() => error = e.toString()); }
-    finally { if (mounted) setState(() => busy = false); }
+    } catch (e) { if (mounted) { setState(() => error = e.toString()); } }
+    finally { if (mounted) { setState(() => busy = false); } }
   }
 
   @override Widget build(BuildContext context) => Scaffold(body: SafeArea(child: Center(child: SingleChildScrollView(
