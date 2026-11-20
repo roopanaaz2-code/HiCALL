@@ -27,7 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> loadMe() async {
-    try { final p = await ProfileService.instance.myProfile(); if (mounted) setState(() => me = p); } catch (_) {}
+    try { final p = await ProfileService.instance.myProfile(); if (mounted) { setState(() => me = p); } } catch (_) {}
   }
 
   void listenForIncomingCalls() {
