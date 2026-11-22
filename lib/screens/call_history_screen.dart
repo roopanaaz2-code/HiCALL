@@ -77,7 +77,7 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
     return RefreshIndicator(
       onRefresh: _load,
       child: _loading && _calls.isEmpty
-          ? const ListView(children: [SizedBox(height: 180), Center(child: CircularProgressIndicator())])
+          ? ListView(children: const [SizedBox(height: 180), Center(child: CircularProgressIndicator())])
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
               children: [
