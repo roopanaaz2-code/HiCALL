@@ -45,13 +45,22 @@ Deno.serve(async (req: Request) => {
       const callType = body.call_type as string;
       if (!recipientId || recipientId === user.id) return json({ error: "Invalid recipient." }, 400);
       if (!["audio", "video"].includes(callType)) return json({ error: "Invalid call type." }, 400);
-      const [{ data: recipient }, { data: blockA }, { data: blockB }] = await Promise.all([
+      const [{ data: recipient, error: recipientError }, { data: blockA, error: blockAError }, { data: blockB, error: blockBError }] = await Promise.all([
         admin.from("profiles").select("id").eq("id", recipientId).maybeSingle(),
         admin.from("user_blocks").select("blocker_id").eq("blocker_id", user.id).eq("blocked_id", recipientId).maybeSingle(),
         admin.from("user_blocks").select("blocker_id").eq("blocker_id", recipientId).eq("blocked_id", user.id).maybeSingle(),
       ]);
+      if (recipientError || blockAError || blockBError) return json({ error: "Unable to verify call availability." }, 503);
       if (!recipient) return json({ error: "User not found." }, 404);
       if (blockA || blockB) return json({ error: "Calls are unavailable between these accounts." }, 403);
+      const { data: savedContact, error: contactError } = await admin
+        .from("user_contacts")
+        .select("contact_id")
+        .eq("owner_id", user.id)
+        .eq("contact_id", recipientId)
+        .maybeSingle();
+      if (contactError) return json({ error: "Unable to verify this contact." }, 503);
+      if (!savedContact) return json({ error: "Add this user as a contact before calling." }, 403);
 
       const roomName = `hicall-${crypto.randomUUID()}`;
       const expiresAt = new Date(Date.now() + 45_000).toISOString();
@@ -79,10 +88,32 @@ Deno.serve(async (req: Request) => {
       if (!callId) return json({ error: "Call ID required." }, 400);
       const { data: participant } = await admin.from("call_participants").select("call_id, left_at").eq("call_id", callId).eq("user_id", user.id).maybeSingle();
       if (!participant || participant.left_at) return json({ error: "You are not an active participant." }, 403);
-      const { data: call } = await admin.from("call_sessions").select("id, room_name, call_type, status, expires_at").eq("id", callId).maybeSingle();
+      const { data: call } = await admin.from("call_sessions").select("id, created_by, room_name, call_type, status, expires_at").eq("id", callId).maybeSingle();
       if (!call || !["ringing", "active"].includes(call.status) || new Date(call.expires_at).getTime() < Date.now()) {
         return json({ error: "This call is no longer available." }, 410);
       }
+      const { data: otherParticipant, error: otherParticipantError } = await admin
+        .from("call_participants")
+        .select("user_id")
+        .eq("call_id", callId)
+        .neq("user_id", user.id)
+        .maybeSingle();
+      if (otherParticipantError) return json({ error: "Unable to verify this call." }, 503);
+      if (!otherParticipant) return json({ error: "This call has no other participant." }, 403);
+      const [{ data: blockA, error: blockAError }, { data: blockB, error: blockBError }] = await Promise.all([
+        admin.from("user_blocks").select("blocker_id").eq("blocker_id", user.id).eq("blocked_id", otherParticipant.user_id).maybeSingle(),
+        admin.from("user_blocks").select("blocker_id").eq("blocker_id", otherParticipant.user_id).eq("blocked_id", user.id).maybeSingle(),
+      ]);
+      if (blockAError || blockBError) return json({ error: "Unable to verify call availability." }, 503);
+      if (blockA || blockB) return json({ error: "Calls are unavailable between these accounts." }, 403);
+      const { data: savedContact, error: contactError } = await admin
+        .from("user_contacts")
+        .select("contact_id")
+        .eq("owner_id", call.created_by)
+        .eq("contact_id", user.id === call.created_by ? otherParticipant.user_id : user.id)
+        .maybeSingle();
+      if (contactError) return json({ error: "Unable to verify this contact." }, 503);
+      if (!savedContact) return json({ error: "This caller is no longer a saved contact." }, 403);
       await admin.from("call_participants").update({ joined_at: new Date().toISOString() }).eq("call_id", callId).eq("user_id", user.id);
       await admin.from("call_sessions").update({ status: "active", started_at: new Date().toISOString() }).eq("id", callId).eq("status", "ringing");
       const { data: profile } = await admin.from("profiles").select("display_name, username").eq("id", user.id).maybeSingle();

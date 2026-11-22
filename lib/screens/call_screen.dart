@@ -1,84 +1,602 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:permission_handler/permission_handler.dart';
+
 import '../services/call_service.dart';
 
 class CallScreen extends StatefulWidget {
-  const CallScreen({super.key, required this.credentials, required this.remoteName});
+  const CallScreen({
+    super.key,
+    required this.credentials,
+    required this.remoteName,
+  });
+
   final CallCredentials credentials;
   final String remoteName;
-  @override State<CallScreen> createState() => _CallScreenState();
+
+  @override
+  State<CallScreen> createState() => _CallScreenState();
 }
+
 class _CallScreenState extends State<CallScreen> {
   late final Room room;
-  bool connecting = true, connected = false, muted = false, cameraOn = false, ending = false;
+  EventsListener<RoomEvent>? _roomListener;
+  Timer? _callTimer;
+  DateTime? _connectedAt;
+  VideoTrack? _remoteVideoTrack;
+
+  bool connecting = true;
+  bool connected = false;
+  bool reconnecting = false;
+  bool muted = false;
+  bool cameraOn = false;
+  bool ending = false;
   String? error;
-  @override void initState() { super.initState(); room = Room(); connect(); }
+  Duration elapsed = Duration.zero;
+
+  bool get _isVideoCall => widget.credentials.callType == 'video';
+
+  @override
+  void initState() {
+    super.initState();
+    room = Room();
+    _listenToRoom();
+    unawaited(connect());
+  }
+
+  void _listenToRoom() {
+    _roomListener = room.createListener()
+      ..on<ParticipantConnectedEvent>((_) => _refreshRemoteVideo())
+      ..on<ParticipantDisconnectedEvent>((_) => _refreshRemoteVideo())
+      ..on<TrackPublishedEvent>((_) => _refreshRemoteVideo())
+      ..on<TrackUnpublishedEvent>((_) => _refreshRemoteVideo())
+      ..on<TrackSubscribedEvent>((_) => _refreshRemoteVideo())
+      ..on<TrackUnsubscribedEvent>((_) => _refreshRemoteVideo())
+      ..on<TrackMutedEvent>((_) => _refreshRemoteVideo())
+      ..on<TrackUnmutedEvent>((_) => _refreshRemoteVideo())
+      ..on<RoomReconnectingEvent>((_) {
+        if (!mounted || ending) return;
+        setState(() => reconnecting = true);
+      })
+      ..on<RoomReconnectedEvent>((_) {
+        if (!mounted || ending) return;
+        setState(() {
+          reconnecting = false;
+          connected = true;
+          connecting = false;
+          error = null;
+        });
+        _refreshRemoteVideo();
+      })
+      ..on<RoomDisconnectedEvent>((_) {
+        if (!mounted || ending) return;
+        setState(() {
+          connected = false;
+          reconnecting = false;
+          connecting = false;
+          error = 'The call was disconnected.';
+          _remoteVideoTrack = null;
+        });
+      });
+  }
 
   Future<void> connect() async {
     try {
-      final mic = await Permission.microphone.request();
-      if (!mic.isGranted) { throw Exception('Microphone permission is required.'); }
-      if (widget.credentials.callType == 'video') {
-        final camera = await Permission.camera.request();
-        if (!camera.isGranted) { throw Exception('Camera permission is required for video calls.'); }
+      final micPermission = await Permission.microphone.request();
+      if (!micPermission.isGranted) {
+        throw _PermissionFailure(
+          micPermission.isPermanentlyDenied
+              ? 'Microphone access is blocked. Enable it in Settings to place calls.'
+              : 'Microphone permission is required to place a call.',
+        );
       }
+
+      if (_isVideoCall) {
+        final cameraPermission = await Permission.camera.request();
+        if (!cameraPermission.isGranted) {
+          throw _PermissionFailure(
+            cameraPermission.isPermanentlyDenied
+                ? 'Camera access is blocked. Enable it in Settings to place video calls.'
+                : 'Camera permission is required for video calls.',
+          );
+        }
+      }
+      if (!mounted || ending) return;
+
       await room.connect(widget.credentials.serverUrl, widget.credentials.token);
-      await room.localParticipant?.setMicrophoneEnabled(true);
-      if (widget.credentials.callType == 'video') {
-        await room.localParticipant?.setCameraEnabled(true);
-        cameraOn = true;
+      if (!mounted || ending) {
+        try {
+          await room.disconnect();
+        } catch (_) {}
+        return;
       }
-      if (mounted) { setState(() { connected = true; connecting = false; }); }
-    } catch (e) { if (mounted) { setState(() { error = e.toString(); connecting = false; }); } }
+
+      await room.localParticipant?.setMicrophoneEnabled(true);
+      if (!mounted || ending) {
+        try {
+          await room.disconnect();
+        } catch (_) {}
+        return;
+      }
+      if (_isVideoCall) {
+        await room.localParticipant?.setCameraEnabled(true);
+      }
+      if (!mounted || ending) return;
+
+      setState(() {
+        connected = true;
+        reconnecting = false;
+        connecting = false;
+        cameraOn = _isVideoCall;
+        muted = false;
+        error = null;
+      });
+      _startCallTimer();
+      _refreshRemoteVideo();
+    } on _PermissionFailure catch (e) {
+      if (!mounted) return;
+      setState(() {
+        error = e.message;
+        connecting = false;
+        connected = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        error = 'Could not connect to the call. Check your internet connection and try again.';
+        connecting = false;
+        connected = false;
+        reconnecting = false;
+      });
+    }
+  }
+
+  void _startCallTimer() {
+    if (_connectedAt != null) return;
+    _connectedAt = DateTime.now();
+    _callTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted || _connectedAt == null) return;
+      setState(() => elapsed = DateTime.now().difference(_connectedAt!));
+    });
+  }
+
+  void _refreshRemoteVideo() {
+    VideoTrack? firstTrack;
+    for (final participant in room.remoteParticipants.values) {
+      for (final publication in participant.videoTrackPublications) {
+        final track = publication.track;
+        if (!publication.isScreenShare && !publication.muted && track != null) {
+          firstTrack = track;
+          break;
+        }
+      }
+      if (firstTrack != null) break;
+    }
+
+    if (!mounted || identical(firstTrack, _remoteVideoTrack)) return;
+    setState(() => _remoteVideoTrack = firstTrack);
   }
 
   Future<void> toggleMic() async {
-    final next = !muted;
-    await room.localParticipant?.setMicrophoneEnabled(!next);
-    if (mounted) { setState(() => muted = next); }
+    if (!connected || ending) return;
+    final nextMuted = !muted;
+    try {
+      await room.localParticipant?.setMicrophoneEnabled(!nextMuted);
+      if (mounted) setState(() => muted = nextMuted);
+    } catch (_) {
+      if (mounted) {
+        setState(() => error = 'Unable to change microphone settings. Check microphone permission.');
+      }
+    }
   }
+
   Future<void> toggleCamera() async {
-    final next = !cameraOn;
-    await room.localParticipant?.setCameraEnabled(next);
-    if (mounted) { setState(() => cameraOn = next); }
+    if (!connected || ending) return;
+    final nextCameraOn = !cameraOn;
+    try {
+      if (nextCameraOn) {
+        final permission = await Permission.camera.request();
+        if (!permission.isGranted) {
+          if (mounted) {
+            setState(() {
+              error = permission.isPermanentlyDenied
+                  ? 'Camera access is blocked. Enable it in Settings to turn on video.'
+                : 'Camera permission is required to turn on video.';
+            });
+          }
+          return;
+        }
+        if (!mounted || ending) return;
+      }
+      await room.localParticipant?.setCameraEnabled(nextCameraOn);
+      if (mounted) setState(() => cameraOn = nextCameraOn);
+    } catch (_) {
+      if (mounted) {
+        setState(() => error = 'Unable to change camera settings. Check camera permission.');
+      }
+    }
   }
+
   Future<void> hangUp() async {
-    if (ending) { return; }
+    if (ending) return;
     setState(() => ending = true);
-    try { await room.disconnect(); } catch (_) {}
-    try { await CallService.instance.endCall(widget.credentials.callId); } catch (_) {}
-    if (mounted) { Navigator.of(context).pop(); }
-  }
-  @override void dispose() { room.dispose(); super.dispose(); }
-
-  @override Widget build(BuildContext context) {
-    final video = widget.credentials.callType == 'video';
-    return PopScope(canPop: false, child: Scaffold(
-      appBar: AppBar(leading: const SizedBox.shrink(), title: Text(video ? 'Video call' : 'Audio call')),
-      body: SafeArea(child: Column(children: [
-        const Spacer(),
-        CircleAvatar(radius: 48, backgroundColor: const Color(0xFF123A69),
-          child: Icon(video ? Icons.videocam : Icons.person, size: 48, color: const Color(0xFF16D5F4))),
-        const SizedBox(height: 18),
-        Text(widget.remoteName, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        Text(connecting ? 'Connecting…' : connected ? 'Connected' : 'Call not connected', style: const TextStyle(color: Colors.white70)),
-        if (error != null) Padding(padding: const EdgeInsets.all(20), child: Text(error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.redAccent))),
-        const Spacer(),
-        if (connected) Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          control(muted ? Icons.mic_off : Icons.mic, toggleMic, muted),
-          if (video) ...[const SizedBox(width: 24), control(cameraOn ? Icons.videocam : Icons.videocam_off, toggleCamera, !cameraOn)],
-        ]),
-        const SizedBox(height: 28),
-        Padding(padding: const EdgeInsets.fromLTRB(24, 0, 24, 30), child: ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD9364F)),
-          onPressed: ending ? null : hangUp, child: Text(ending ? 'Ending…' : 'End call'))),
-      ])),
-    ));
+    _callTimer?.cancel();
+    try {
+      await room.disconnect();
+    } catch (_) {}
+    try {
+      await CallService.instance.endCall(widget.credentials.callId);
+    } catch (_) {}
+    if (mounted) Navigator.of(context).pop();
   }
 
-  Widget control(IconData icon, VoidCallback action, bool selected) => CircleAvatar(
-    radius: 28, backgroundColor: selected ? const Color(0xFF087DE0) : const Color(0xFF26334F),
-    child: IconButton(onPressed: action, icon: Icon(icon, color: Colors.white)));
+  Future<void> _disposeRoom() async {
+    final listener = _roomListener;
+    _roomListener = null;
+    if (listener != null) await listener.dispose();
+    try {
+      await room.disconnect();
+    } catch (_) {}
+    await room.dispose();
+  }
+
+  @override
+  void dispose() {
+    _callTimer?.cancel();
+    unawaited(_disposeRoom());
+    super.dispose();
+  }
+
+  String get _statusLabel {
+    if (ending) return 'Ending call…';
+    if (reconnecting) return 'Reconnecting…';
+    if (connecting) return 'Connecting…';
+    if (connected) return 'Connected';
+    return error == null ? 'Call ended' : 'Unable to connect';
+  }
+
+  String get _elapsedLabel {
+    final hours = elapsed.inHours;
+    final minutes = elapsed.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = elapsed.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return hours > 0 ? '$hours:$minutes:$seconds' : '$minutes:$seconds';
+  }
+
+  LocalVideoTrack? get _localCameraTrack {
+    final publications = room.localParticipant?.videoTrackPublications ?? const [];
+    for (final publication in publications) {
+      if (publication.source == TrackSource.camera && publication.track != null) {
+        return publication.track;
+      }
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        backgroundColor: const Color(0xFF070D1B),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF070D1B),
+          leading: const SizedBox.shrink(),
+          title: Text(_isVideoCall ? 'Video call' : 'Audio call'),
+          centerTitle: true,
+        ),
+        body: SafeArea(
+          child: _isVideoCall ? _buildVideoCall() : _buildAudioCall(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVideoCall() {
+    final remoteTrack = _remoteVideoTrack;
+    final localTrack = cameraOn ? _localCameraTrack : null;
+    return Column(
+      children: [
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Container(color: const Color(0xFF111C31)),
+                  if (remoteTrack != null)
+                    VideoTrackRenderer(
+                      remoteTrack,
+                      key: ObjectKey(remoteTrack),
+                      fit: VideoViewFit.cover,
+                    )
+                  else
+                    _remoteVideoPlaceholder(),
+                  Positioned(
+                    top: 14,
+                    left: 14,
+                    child: _statusPill(),
+                  ),
+                  Positioned(
+                    top: 14,
+                    right: 14,
+                    child: _localVideoTile(localTrack),
+                  ),
+                  if (error != null)
+                    Positioned(
+                      left: 14,
+                      right: 14,
+                      bottom: 14,
+                      child: _errorBanner(),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        _buildControls(),
+      ],
+    );
+  }
+
+  Widget _remoteVideoPlaceholder() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _avatar(46, Icons.person),
+            const SizedBox(height: 18),
+            Text(
+              widget.remoteName,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              connected ? 'Waiting for video…' : _statusLabel,
+              style: const TextStyle(color: Colors.white70, fontSize: 15),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _localVideoTile(LocalVideoTrack? track) {
+    return Container(
+      width: 112,
+      height: 156,
+      decoration: BoxDecoration(
+        color: const Color(0xFF202D44),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white24, width: 1),
+        boxShadow: const [
+          BoxShadow(color: Colors.black38, blurRadius: 14, offset: Offset(0, 5)),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (track != null)
+            VideoTrackRenderer(
+              track,
+              key: ObjectKey(track),
+              fit: VideoViewFit.cover,
+              mirrorMode: VideoViewMirrorMode.mirror,
+            )
+          else
+            Center(
+              child: Icon(
+                cameraOn ? Icons.person : Icons.videocam_off,
+                size: 36,
+                color: Colors.white70,
+              ),
+            ),
+          Positioned(
+            left: 8,
+            bottom: 8,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Text(
+                  cameraOn ? 'You' : 'Camera off',
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAudioCall() {
+    return Column(
+      children: [
+        Expanded(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _avatar(58, Icons.person),
+                  const SizedBox(height: 22),
+                  Text(
+                    widget.remoteName,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 10),
+                  _statusPill(),
+                  if (connected) ...[
+                    const SizedBox(height: 14),
+                    Text(_elapsedLabel, style: const TextStyle(color: Colors.white70, fontSize: 16)),
+                  ],
+                  if (error != null) ...[
+                    const SizedBox(height: 18),
+                    _errorBanner(),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+        _buildControls(),
+      ],
+    );
+  }
+
+  Widget _avatar(double radius, IconData icon) {
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: const Color(0xFF183B67),
+      child: Icon(icon, size: radius, color: const Color(0xFF35D5E8)),
+    );
+  }
+
+  Widget _statusPill() {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xCC080D18),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (connecting || reconnecting) ...[
+              const SizedBox(
+                width: 13,
+                height: 13,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              const SizedBox(width: 8),
+            ] else ...[
+              Icon(
+                connected ? Icons.circle : Icons.info_outline,
+                size: 10,
+                color: connected ? const Color(0xFF50D890) : Colors.white70,
+              ),
+              const SizedBox(width: 8),
+            ],
+            Text(_statusLabel, style: const TextStyle(fontSize: 13)),
+            if (connected) ...[
+              const SizedBox(width: 8),
+              Text(_elapsedLabel, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _errorBanner() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      decoration: BoxDecoration(
+        color: const Color(0xDD4B202B),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0x77F06B78)),
+      ),
+      child: Text(
+        error!,
+        textAlign: TextAlign.center,
+        style: const TextStyle(color: Color(0xFFFFDDE1), fontSize: 13),
+      ),
+    );
+  }
+
+  Widget _buildControls() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 6, 20, 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _controlButton(
+                icon: muted ? Icons.mic_off : Icons.mic,
+                label: muted ? 'Unmute' : 'Mute',
+                selected: muted,
+                onPressed: connected && !ending ? () => unawaited(toggleMic()) : null,
+              ),
+              if (_isVideoCall) ...[
+                const SizedBox(width: 30),
+                _controlButton(
+                  icon: cameraOn ? Icons.videocam : Icons.videocam_off,
+                  label: cameraOn ? 'Camera on' : 'Camera off',
+                  selected: !cameraOn,
+                  onPressed: connected && !ending ? () => unawaited(toggleCamera()) : null,
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 22),
+          SizedBox(
+            width: double.infinity,
+            height: 54,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFD9364F),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              onPressed: ending ? null : () => unawaited(hangUp()),
+              icon: const Icon(Icons.call_end),
+              label: Text(ending ? 'Ending call…' : 'End call'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _controlButton({
+    required IconData icon,
+    required String label,
+    required bool selected,
+    required VoidCallback? onPressed,
+  }) {
+    final color = selected ? const Color(0xFF34435E) : const Color(0xFF176CC0);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 60,
+          height: 60,
+          child: IconButton.filled(
+            onPressed: onPressed,
+            style: IconButton.styleFrom(
+              backgroundColor: color,
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: const Color(0xFF273247),
+              disabledForegroundColor: Colors.white54,
+            ),
+            icon: Icon(icon, size: 25),
+          ),
+        ),
+        const SizedBox(height: 7),
+        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+      ],
+    );
+  }
+}
+
+class _PermissionFailure implements Exception {
+  const _PermissionFailure(this.message);
+  final String message;
 }

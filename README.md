@@ -1,26 +1,30 @@
 # HiCALL
 
-HiCALL is an Android-first app focused only on secure audio and video calling.
+HiCALL is an Android-first communication app with an original, IMO-inspired interface. It is not an IMO clone.
 
 ## Included scope
 
 - Email/password registration and sign-in through Supabase Auth
 - Username and display-name profiles
-- Search for other registered users
-- One-to-one audio and video call setup
-- LiveKit room connection and microphone/camera controls
-- Foreground incoming-call prompts using Supabase Realtime
-- Accept, decline, and end call actions
-- Database foundations for call history, blocking, and user reports
+- Exact username search and optional, verified private phone lookup
+- A personal contact list and direct one-to-one plain-text conversations with Realtime updates
+- One-to-one audio/video call screens and call history
+- LiveKit room connection, local/remote video rendering, and microphone/camera controls
+- Foreground incoming-call prompts using Supabase Realtime, with accept/decline/end actions
+- Private phone discovery that is explicitly opt-in and owner-controlled
 - Custom neon-blue HiCALL brand icon
 
-Out of scope: chat rooms, voice rooms, social feeds, stories, livestreaming, gifts, coins, battles, random matching, and unrelated social features.
+Out of scope: group chats, voice rooms, social feeds, stories, livestreaming, gifts/coins, random matching, and message attachments.
 
 ## Backend
 
-A dedicated Supabase project has been provisioned for HiCALL in `ap-south-1` (Mumbai). The initial schema, row-level security policies, profile-on-signup trigger, and Realtime publication for call participants are applied.
+A dedicated Supabase project has been provisioned for HiCALL in `ap-south-1` (Mumbai). The initial schema, row-level security policies, profile-on-signup trigger, and Realtime publication for call participants are applied. The additive first-release migration is now applied; it adds private verified-phone discovery, contacts, direct messages, message Realtime, and a server-side search limiter.
 
-The deployed `call-control` Edge Function verifies the user's Supabase session, checks block relationships, creates call records, and issues short-lived LiveKit access tokens. It requires these server-side secrets before call setup can work:
+The `search-users`, `manage-phone`, and `call-history` Edge Functions are deployed with JWT verification. `call-control` is deployed at version 2 and checks saved-contact and block relationships before call start/join. These functions validate the user's Supabase session, limit phone searches, and keep service-role access server-side.
+
+Phone verification will not work until the project administrator enables phone authentication and configures a Supabase-compatible SMS provider. Existing verified Auth phone values are kept hidden from discovery unless their owner explicitly enables search. Supabase Auth may retain a phone value for account-security use when the owner pauses HiCALL lookup.
+
+The deployed `call-control` Edge Function issues short-lived LiveKit access tokens. It requires these protected server-side secrets before calling can work:
 
 - `LIVEKIT_URL`
 - `LIVEKIT_API_KEY`
@@ -28,12 +32,10 @@ The deployed `call-control` Edge Function verifies the user's Supabase session, 
 
 These must belong to a separate HiCALL LiveKit project. Never reuse NightLink's credentials and never place LiveKit secrets or the Supabase service-role key in the Android app or GitHub source.
 
-## Current implementation limits
+## Incoming calls and device readiness
 
-- Incoming-call prompts currently work only while the app is open and connected to Realtime. Background/terminated-app incoming calls still need Firebase Cloud Messaging and Android call-notification integration.
-- The current UI supports direct one-to-one calls. Group calling, call history UI, profile editing, block/report UI, and full Android audio-routing/foreground-service handling remain to be implemented.
-- The current call screen connects to LiveKit and toggles local microphone/camera. Remote video rendering and robust call-state recovery still need implementation and device testing.
-- The call service returns a configuration error until the HiCALL LiveKit secrets are installed.
+- Incoming-call prompts work only while the app is open and connected to Realtime. Background/terminated-app alerts require Firebase Cloud Messaging and Android call-notification integration, which remain deferred.
+- LiveKit calling cannot be claimed as functional until all three secrets are installed and calls are tested between two Android devices on separate networks.
 
 ## Email confirmation deep link
 
@@ -47,7 +49,7 @@ Keep email confirmations enabled. Do not set the Site URL or email redirect to
 
 ## Android CI
 
-The GitHub Actions workflow `.github/workflows/android-ci.yml` formats, analyzes, tests, and builds both debug and release-variant APK artifacts. The release-variant artifact uses the generated Android project's debug signing configuration unless a private release keystore is configured; it is suitable for installation/testing but is not a Play Store production-signed release. Configure a private upload keystore through GitHub Actions secrets before publishing.
+The GitHub Actions workflow `.github/workflows/android-ci.yml` generates Android platform files, formats, analyzes, tests, and builds debug and release-variant APK artifacts. The release-variant artifact uses the generated Android project's debug signing configuration unless a private release keystore is configured; it is suitable for installation/testing, not Play Store production signing. Configure a private upload keystore through GitHub Actions secrets before publishing.
 
 ## Quality gates
 
