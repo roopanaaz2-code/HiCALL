@@ -29,11 +29,11 @@ class _ChatsScreenState extends State<ChatsScreen> {
     });
     try {
       final rows = await MessagingService.instance.listConversations();
-      if (mounted) setState(() => _conversations = rows);
+      if (mounted) { setState(() => _conversations = rows); }
     } catch (_) {
-      if (mounted) setState(() => _error = 'Chats are temporarily unavailable. Please try again.');
+      if (mounted) { setState(() => _error = 'Chats are temporarily unavailable. Please try again.'); }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) { setState(() => _loading = false); }
     }
   }
 
@@ -43,16 +43,16 @@ class _ChatsScreenState extends State<ChatsScreen> {
   }
 
   String _preview(Map<String, dynamic>? message) {
-    if (message == null) return 'Start your conversation';
+    if (message == null) { return 'Start your conversation'; }
     final body = (message['body'] as String? ?? '').replaceAll('\n', ' ');
     final currentUserId = Supabase.instance.client.auth.currentUser?.id;
     return '${message['sender_id'] == currentUserId ? 'You: ' : ''}$body';
   }
 
   String _time(dynamic value) {
-    if (value is! String) return '';
+    if (value is! String) { return ''; }
     final date = DateTime.tryParse(value)?.toLocal();
-    if (date == null) return '';
+    if (date == null) { return ''; }
     final now = DateTime.now();
     if (date.year == now.year && date.month == now.month && date.day == now.day) {
       return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
@@ -68,7 +68,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
         otherProfile: profile,
       ),
     ));
-    if (mounted) _load();
+    if (mounted) { _load(); }
   }
 
   @override

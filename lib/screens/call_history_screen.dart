@@ -26,11 +26,11 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final calls = await CallHistoryService.instance.load();
-      if (mounted) setState(() => _calls = calls);
+      if (mounted) { setState(() => _calls = calls); }
     } catch (_) {
-      if (mounted) setState(() => _error = 'Call history is temporarily unavailable.');
+      if (mounted) { setState(() => _error = 'Call history is temporarily unavailable.'); }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) { setState(() => _loading = false); }
     }
   }
 
@@ -40,9 +40,9 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
   }
 
   String _time(dynamic value) {
-    if (value is! String) return '';
+    if (value is! String) { return ''; }
     final date = DateTime.tryParse(value)?.toLocal();
-    if (date == null) return '';
+    if (date == null) { return ''; }
     final today = DateTime.now();
     if (date.year == today.year && date.month == today.month && date.day == today.day) {
       return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
@@ -52,11 +52,11 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
 
   String _status(Map<String, dynamic> call) {
     final status = call['status'] as String? ?? '';
-    if (status == 'declined') return 'Declined';
-    if (status == 'missed') return 'Missed';
-    if (status == 'cancelled') return 'Cancelled';
-    if (status == 'active') return 'In progress';
-    if (status == 'ended') return 'Completed';
+    if (status == 'declined') { return 'Declined'; }
+    if (status == 'missed') { return 'Missed'; }
+    if (status == 'cancelled') { return 'Cancelled'; }
+    if (status == 'active') { return 'In progress'; }
+    if (status == 'ended') { return 'Completed'; }
     return status.isEmpty ? 'Call' : status;
   }
 
@@ -64,10 +64,10 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
     final profile = Map<String, dynamic>.from(call['other_profile'] as Map);
     try {
       final credentials = await CallService.instance.startCall(recipientId: profile['id'] as String, callType: type);
-      if (!mounted) return;
+      if (!mounted) { return; }
       await Navigator.of(context).push(MaterialPageRoute(builder: (_) => CallScreen(credentials: credentials, remoteName: _name(profile))));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unable to start call: ${e.toString().replaceFirst('Exception: ', '')}')));
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unable to start call: ${e.toString().replaceFirst('Exception: ', '')}'))); }
     }
   }
 

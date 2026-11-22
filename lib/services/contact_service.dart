@@ -8,7 +8,7 @@ class ContactService {
 
   String get _userId {
     final id = _client.auth.currentUser?.id;
-    if (id == null) throw const AuthException('Sign in to manage contacts.');
+    if (id == null) { throw const AuthException('Sign in to manage contacts.'); }
     return id;
   }
 
@@ -20,7 +20,7 @@ class ContactService {
         .order('created_at', ascending: false)
         .limit(200);
     final ids = rows.map((row) => row['contact_id'] as String).toList();
-    if (ids.isEmpty) return [];
+    if (ids.isEmpty) { return []; }
     final profiles = await _client
         .from('profiles')
         .select('id, username, display_name, avatar_path')
@@ -30,7 +30,7 @@ class ContactService {
   }
 
   Future<void> addContact(String contactId) async {
-    if (contactId == _userId) throw const FormatException('You cannot add your own account.');
+    if (contactId == _userId) { throw const FormatException('You cannot add your own account.'); }
     await _client.from('user_contacts').insert({'owner_id': _userId, 'contact_id': contactId});
   }
 

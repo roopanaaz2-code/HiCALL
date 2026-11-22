@@ -43,11 +43,11 @@ class _ContactsScreenState extends State<ContactsScreen> {
     setState(() => _loadingContacts = true);
     try {
       final rows = await ContactService.instance.listContacts();
-      if (mounted) setState(() => _contacts = rows);
+      if (mounted) { setState(() => _contacts = rows); }
     } catch (_) {
-      if (mounted) setState(() => _error = 'Contacts are temporarily unavailable. Please try again.');
+      if (mounted) { setState(() => _error = 'Contacts are temporarily unavailable. Please try again.'); }
     } finally {
-      if (mounted) setState(() => _loadingContacts = false);
+      if (mounted) { setState(() => _loadingContacts = false); }
     }
   }
 
@@ -80,7 +80,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
 
   Future<void> _searchPeople(String value) async {
     final query = value.trim();
-    if (query.length < 3) return;
+    if (query.length < 3) { return; }
     final generation = ++_searchGeneration;
     setState(() {
       _searching = true;
@@ -95,7 +95,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
       } else {
         matches = await ProfileService.instance.searchUsers(query);
       }
-      if (mounted && generation == _searchGeneration) setState(() => _results = matches);
+      if (mounted && generation == _searchGeneration) { setState(() => _results = matches); }
     } catch (e) {
       if (mounted && generation == _searchGeneration) {
         final message = e.toString().replaceFirst('Exception: ', '').replaceFirst('FormatException: ', '');
@@ -107,7 +107,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
         });
       }
     } finally {
-      if (mounted && generation == _searchGeneration) setState(() => _searching = false);
+      if (mounted && generation == _searchGeneration) { setState(() => _searching = false); }
     }
   }
 
@@ -135,7 +135,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
       ),
     );
     controller.dispose();
-    if (phone == null || phone.isEmpty) return;
+    if (phone == null || phone.isEmpty) { return; }
     _search.text = phone;
     await _searchPeople(phone);
   }
@@ -144,7 +144,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
     try {
       await ContactService.instance.addContact(person['id'] as String);
       await _loadContacts();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Contact added.')));
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Contact added.'))); }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
@@ -164,11 +164,11 @@ class _ContactsScreenState extends State<ContactsScreen> {
         ],
       ),
     );
-    if (!mounted || confirmed != true) return;
+    if (!mounted || confirmed != true) { return; }
     try {
       await ContactService.instance.removeContact(person['id'] as String);
       await _loadContacts();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Contact removed.')));
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Contact removed.'))); }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
@@ -184,12 +184,12 @@ class _ContactsScreenState extends State<ContactsScreen> {
         await _loadContacts();
       }
       final conversationId = await MessagingService.instance.openConversation(userId);
-      if (!mounted) return;
+      if (!mounted) { return; }
       await Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => DirectChatScreen(conversationId: conversationId, otherProfile: person),
       ));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')))); }
     }
   }
 
@@ -199,12 +199,12 @@ class _ContactsScreenState extends State<ContactsScreen> {
         recipientId: person['id'] as String,
         callType: type,
       );
-      if (!mounted) return;
+      if (!mounted) { return; }
       await Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => CallScreen(credentials: credentials, remoteName: _name(person)),
       ));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unable to start call: ${e.toString().replaceFirst('Exception: ', '')}')));
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unable to start call: ${e.toString().replaceFirst('Exception: ', '')}'))); }
     }
   }
 
@@ -367,7 +367,7 @@ class _PersonCard extends StatelessWidget {
               PopupMenuButton<String>(
                 tooltip: 'Contact options',
                 onSelected: (value) {
-                  if (value == 'remove') onRemove();
+                  if (value == 'remove') { onRemove(); }
                 },
                 itemBuilder: (_) => const [
                   PopupMenuItem(value: 'remove', child: Text('Remove contact')),

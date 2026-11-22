@@ -44,7 +44,7 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
     _text.dispose();
     _scroll.dispose();
     final channel = _channel;
-    if (channel != null) unawaited(MessagingService.instance.closeChannel(channel));
+    if (channel != null) { unawaited(MessagingService.instance.closeChannel(channel)); }
     super.dispose();
   }
 
@@ -55,27 +55,27 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
     });
     try {
       final rows = await MessagingService.instance.listMessages(widget.conversationId);
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() {
         for (final row in rows) {
           final id = row['id'] as String;
-          if (_messageIds.add(id)) _messages.add(row);
+          if (_messageIds.add(id)) { _messages.add(row); }
         }
         _messages.sort((a, b) => _timestamp(a).compareTo(_timestamp(b)));
         _loading = false;
       });
       _scrollToLatest();
     } catch (_) {
-      if (mounted) setState(() { _loading = false; _error = 'Messages could not be loaded. Check your connection and try again.'; });
+      if (mounted) { setState(() { _loading = false; _error = 'Messages could not be loaded. Check your connection and try again.'; }); }
     }
   }
 
   DateTime _timestamp(Map<String, dynamic> row) => DateTime.tryParse(row['created_at'] as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
 
   void _onMessage(Map<String, dynamic> message) {
-    if (!mounted) return;
+    if (!mounted) { return; }
     final id = message['id'] as String?;
-    if (id == null || !_messageIds.add(id)) return;
+    if (id == null || !_messageIds.add(id)) { return; }
     setState(() {
       _messages.add(message);
       _messages.sort((a, b) => _timestamp(a).compareTo(_timestamp(b)));
@@ -85,13 +85,13 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
 
   void _scrollToLatest() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scroll.hasClients) _scroll.animateTo(0, duration: const Duration(milliseconds: 220), curve: Curves.easeOut);
+      if (_scroll.hasClients) { _scroll.animateTo(0, duration: const Duration(milliseconds: 220), curve: Curves.easeOut); }
     });
   }
 
   Future<void> _send() async {
     final value = _text.text.trim();
-    if (value.isEmpty || _sending) return;
+    if (value.isEmpty || _sending) { return; }
     if (value.length > 4000) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Messages must be 4,000 characters or fewer.')));
       return;
@@ -101,9 +101,9 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
       await MessagingService.instance.sendMessage(widget.conversationId, value);
       _text.clear();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Message not sent: ${e.toString().replaceFirst('Exception: ', '')}')));
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Message not sent: ${e.toString().replaceFirst('Exception: ', '')}'))); }
     } finally {
-      if (mounted) setState(() => _sending = false);
+      if (mounted) { setState(() => _sending = false); }
     }
   }
 
@@ -113,16 +113,16 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
         recipientId: widget.otherProfile['id'] as String,
         callType: type,
       );
-      if (!mounted) return;
+      if (!mounted) { return; }
       await Navigator.of(context).push(MaterialPageRoute(builder: (_) => CallScreen(credentials: credentials, remoteName: _name)));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unable to start call: ${e.toString().replaceFirst('Exception: ', '')}')));
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unable to start call: ${e.toString().replaceFirst('Exception: ', '')}'))); }
     }
   }
 
   String _time(Map<String, dynamic> message) {
     final date = _timestamp(message).toLocal();
-    if (date.millisecondsSinceEpoch == 0) return '';
+    if (date.millisecondsSinceEpoch == 0) { return ''; }
     return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
 

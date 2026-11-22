@@ -39,7 +39,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final profile = await ProfileService.instance.myProfile();
       final phone = await PhoneService.instance.ownVerifiedPhone();
-      if (!mounted) return;
+      if (!mounted) { return; }
       _displayName.text = profile?['display_name'] as String? ?? '';
       _username.text = profile?['username'] as String? ?? '';
       setState(() {
@@ -47,7 +47,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _loading = false;
       });
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() {
         _loading = false;
         _error = 'Profile details are temporarily unavailable. Please try again.';
@@ -73,9 +73,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ? 'That username is already taken. Choose another one.'
           : 'Could not save your profile. Please try again.');
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString().replaceFirst('FormatException: ', ''));
+      if (mounted) { setState(() => _error = e.toString().replaceFirst('FormatException: ', '')); }
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) { setState(() => _saving = false); }
     }
   }
 
@@ -105,11 +105,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
-    if (confirmed != true) return;
+    if (confirmed != true) { return; }
     try {
       await PhoneService.instance.disableOwnPhoneDiscovery();
       await _load();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your number is hidden from phone search.')));
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your number is hidden from phone search.'))); }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
@@ -121,9 +121,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       await PhoneService.instance.enableOwnPhoneDiscovery();
       await _load();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your verified number is searchable again.')));
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your verified number is searchable again.'))); }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')))); }
     }
   }
 
@@ -131,7 +131,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final user = Supabase.instance.client.auth.currentUser;
     final colors = Theme.of(context).colorScheme;
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_loading) { return const Center(child: CircularProgressIndicator()); }
 
     return RefreshIndicator(
       onRefresh: _load,
@@ -284,11 +284,11 @@ class _PhoneVerificationDialogState extends State<_PhoneVerificationDialog> {
     setState(() { _busy = true; _error = null; });
     try {
       await PhoneService.instance.requestVerification(_phone.text);
-      if (mounted) setState(() => _codeSent = true);
+      if (mounted) { setState(() => _codeSent = true); }
     } catch (e) {
-      if (mounted) setState(() => _error = _friendly(e));
+      if (mounted) { setState(() => _error = _friendly(e)); }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) { setState(() => _busy = false); }
     }
   }
 
@@ -296,11 +296,11 @@ class _PhoneVerificationDialogState extends State<_PhoneVerificationDialog> {
     setState(() { _busy = true; _error = null; });
     try {
       await PhoneService.instance.verify(_phone.text, _code.text);
-      if (mounted) Navigator.pop(context, true);
+      if (mounted) { Navigator.pop(context, true); }
     } catch (e) {
-      if (mounted) setState(() => _error = _friendly(e));
+      if (mounted) { setState(() => _error = _friendly(e)); }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) { setState(() => _busy = false); }
     }
   }
 

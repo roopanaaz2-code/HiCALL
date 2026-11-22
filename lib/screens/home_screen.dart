@@ -34,7 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _listenForIncomingCalls() {
     final client = Supabase.instance.client;
     final userId = client.auth.currentUser?.id;
-    if (userId == null) return;
+    if (userId == null) { return; }
     _incomingChannel = client
         .channel('hicall-incoming-$userId')
         .onPostgresChanges(
@@ -48,7 +48,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           callback: (payload) {
             final id = payload.newRecord['call_id'] as String?;
-            if (id != null) unawaited(_handleIncomingCall(id));
+            if (id != null) { unawaited(_handleIncomingCall(id)); }
           },
         )
         .subscribe();
@@ -57,7 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _checkPendingIncomingCalls() async {
     final client = Supabase.instance.client;
     final userId = client.auth.currentUser?.id;
-    if (userId == null) return;
+    if (userId == null) { return; }
     try {
       final rows = await client
           .from('call_participants')
@@ -66,7 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
           .order('invited_at', ascending: false)
           .limit(20);
       for (final row in rows) {
-        if (!mounted) return;
+        if (!mounted) { return; }
         await _handleIncomingCall(row['call_id'] as String);
       }
     } catch (_) {
@@ -75,7 +75,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _handleIncomingCall(String callId) async {
-    if (!mounted || _handledCalls.contains(callId) || !_processingCalls.add(callId)) return;
+    if (!mounted || _handledCalls.contains(callId) || !_processingCalls.add(callId)) { return; }
     try {
       final client = Supabase.instance.client;
       final call = await client
@@ -83,16 +83,16 @@ class _HomeScreenState extends State<HomeScreen> {
           .select('id, created_by, call_type, status, expires_at')
           .eq('id', callId)
           .maybeSingle();
-      if (call == null || call['status'] != 'ringing' || call['created_by'] == client.auth.currentUser?.id) return;
+      if (call == null || call['status'] != 'ringing' || call['created_by'] == client.auth.currentUser?.id) { return; }
       final expiry = DateTime.tryParse(call['expires_at'] as String? ?? '');
-      if (expiry == null || !expiry.isAfter(DateTime.now().toUtc())) return;
+      if (expiry == null || !expiry.isAfter(DateTime.now().toUtc())) { return; }
 
       final caller = await client
           .from('profiles')
           .select('username, display_name')
           .eq('id', call['created_by'])
           .maybeSingle();
-      if (!mounted) return;
+      if (!mounted) { return; }
       final displayName = caller?['display_name'] as String? ?? '';
       final callerName = displayName.trim().isNotEmpty
           ? displayName
@@ -119,10 +119,10 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       );
-      if (!mounted) return;
+      if (!mounted) { return; }
       if (accepted == true) {
         final credentials = await CallService.instance.joinCall(callId);
-        if (!mounted) return;
+        if (!mounted) { return; }
         await Navigator.of(context).push(MaterialPageRoute(
           builder: (_) => CallScreen(credentials: credentials, remoteName: callerName),
         ));
@@ -143,7 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _removeIncomingChannel() async {
     final channel = _incomingChannel;
     _incomingChannel = null;
-    if (channel != null) await Supabase.instance.client.removeChannel(channel);
+    if (channel != null) { await Supabase.instance.client.removeChannel(channel); }
   }
 
   @override

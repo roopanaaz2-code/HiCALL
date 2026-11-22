@@ -8,7 +8,7 @@ class MessagingService {
 
   String get _userId {
     final id = _client.auth.currentUser?.id;
-    if (id == null) throw const AuthException('Sign in to use chat.');
+    if (id == null) { throw const AuthException('Sign in to use chat.'); }
     return id;
   }
 
@@ -20,7 +20,7 @@ class MessagingService {
         .or('user_a.eq.$id,user_b.eq.$id')
         .order('created_at', ascending: false)
         .limit(100);
-    if (rows.isEmpty) return [];
+    if (rows.isEmpty) { return []; }
 
     final conversations = List<Map<String, dynamic>>.from(rows);
     final otherIds = conversations
@@ -61,7 +61,7 @@ class MessagingService {
 
   Future<String> openConversation(String otherUserId) async {
     final currentId = _userId;
-    if (currentId == otherUserId) throw const FormatException('You cannot chat with your own account.');
+    if (currentId == otherUserId) { throw const FormatException('You cannot chat with your own account.'); }
     final low = currentId.compareTo(otherUserId) < 0 ? currentId : otherUserId;
     final high = currentId.compareTo(otherUserId) < 0 ? otherUserId : currentId;
 
@@ -71,7 +71,7 @@ class MessagingService {
         .eq('user_a', low)
         .eq('user_b', high)
         .maybeSingle();
-    if (existing != null) return existing['id'] as String;
+    if (existing != null) { return existing['id'] as String; }
 
     try {
       final created = await _client
@@ -88,7 +88,7 @@ class MessagingService {
           .eq('user_a', low)
           .eq('user_b', high)
           .maybeSingle();
-      if (raced != null) return raced['id'] as String;
+      if (raced != null) { return raced['id'] as String; }
       rethrow;
     }
   }
@@ -105,8 +105,8 @@ class MessagingService {
 
   Future<void> sendMessage(String conversationId, String body) async {
     final text = body.trim();
-    if (text.isEmpty) return;
-    if (text.length > 4000) throw const FormatException('Messages must be 4,000 characters or fewer.');
+    if (text.isEmpty) { return; }
+    if (text.length > 4000) { throw const FormatException('Messages must be 4,000 characters or fewer.'); }
     await _client.from('messages').insert({
       'conversation_id': conversationId,
       'sender_id': _userId,
