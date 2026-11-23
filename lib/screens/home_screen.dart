@@ -3,11 +3,13 @@ import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
 import '../services/call_service.dart';
+import '../services/call_preferences_service.dart';
 import 'call_history_screen.dart';
 import 'call_screen.dart';
 import 'chats_screen.dart';
 import 'contacts_screen.dart';
 import 'profile_screen.dart';
+import '../widgets/slide_action.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -99,26 +101,38 @@ class _HomeScreenState extends State<HomeScreen> {
           : caller?['username'] as String? ?? 'HiCALL user';
       _handledCalls.add(callId);
       final isVideo = call['call_type'] == 'video';
+      await CallPreferencesService.playIncomingRingtone();
       final accepted = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) => AlertDialog(
           icon: Icon(isVideo ? Icons.videocam_rounded : Icons.call_rounded),
           title: Text(isVideo ? 'Incoming video call' : 'Incoming audio call'),
-          content: Text('$callerName is calling you.'),
+          content: SizedBox(
+            width: 300,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('$callerName is calling you.'),
+                const SizedBox(height: 18),
+                SlideAction(
+                  label: 'Slide to answer',
+                  icon: Icons.call_rounded,
+                  glowColor: const Color(0xFF39D8E8),
+                  onCompleted: () => Navigator.pop(dialogContext, true),
+                ),
+              ],
+            ),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
               child: const Text('Decline'),
             ),
-            FilledButton.icon(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              icon: const Icon(Icons.call_rounded),
-              label: const Text('Accept'),
-            ),
           ],
         ),
       );
+      await CallPreferencesService.stopIncomingRingtone();
       if (!mounted) { return; }
       if (accepted == true) {
         final credentials = await CallService.instance.joinCall(callId);
@@ -136,6 +150,7 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       }
     } finally {
+      await CallPreferencesService.stopIncomingRingtone();
       _processingCalls.remove(callId);
     }
   }
