@@ -78,6 +78,12 @@ Deno.serve(async (req: Request) => {
         await admin.from("call_sessions").update({ status: "cancelled" }).eq("id", call.id);
         throw participantError;
       }
+      // Push is best-effort: a notification failure must not prevent the live call
+      // from being created or the caller from receiving their LiveKit credentials.
+      const { error: pushError } = await admin.functions.invoke("send-incoming-call", {
+        body: { call_id: call.id },
+      });
+      if (pushError) console.error("Incoming-call push dispatch failed", pushError.message);
       const { data: profile } = await admin.from("profiles").select("display_name, username").eq("id", user.id).maybeSingle();
       const token = await issueToken(call.room_name, user.id, profile?.display_name || profile?.username || "HiCALL user");
       return json({ call_id: call.id, room_name: call.room_name, server_url: livekitUrl, token, call_type: callType });
