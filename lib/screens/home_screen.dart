@@ -102,6 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _handledCalls.add(callId);
       final isVideo = call['call_type'] == 'video';
       await CallPreferencesService.playIncomingRingtone();
+      if (!mounted) return;
       final accepted = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
