@@ -38,7 +38,29 @@ jobs:
       - name: Generate Android platform files
         run: flutter create --platforms=android --org com.hicall --project-name hicall .
 
-      - name: Add Android calling permissions and SDK floor
+      - name: Configure Firebase Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p android/app
+          cp firebase/google-services.json android/app/google-services.json
+          python3 - <<'PY'
+          from pathlib import Path
+          settings = Path("android/settings.gradle.kts")
+          s = settings.read_text()
+          marker = 'id("com.google.gms.google-services") version "4.4.4" apply false'
+          if marker not in s:
+              s = s.replace("plugins {", "plugins {\n    " + marker, 1)
+          settings.write_text(s)
+          app = Path("android/app/build.gradle.kts")
+          a = app.read_text()
+          plugin = 'id("com.google.gms.google-services")'
+          if plugin not in a:
+              a = a.replace("plugins {", "plugins {\n    " + plugin, 1)
+          app.write_text(a)
+          PY
+
+      - name: Add Android calling and notification permissions and SDK floor
         shell: bash
         run: |
           python3 - <<'PY'
@@ -50,6 +72,8 @@ jobs:
               '    <uses-permission android:name="android.permission.RECORD_AUDIO"/>',
               '    <uses-permission android:name="android.permission.CAMERA"/>',
               '    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>',
+              '    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>',
+              '    <uses-permission android:name="android.permission.WAKE_LOCK"/>',
               '    <uses-feature android:name="android.hardware.camera" android:required="false"/>',
               '    <uses-feature android:name="android.hardware.microphone" android:required="false"/>',
           ]
@@ -57,7 +81,6 @@ jobs:
               if item not in s:
                   s = s.replace("<application", item + "\n    <application", 1)
           s = s.replace('android:label="hicall"', 'android:label="HiCALL"')
-          # Route real Supabase email-confirmation links back into HiCALL.
           deep_link = """            <intent-filter>
                           <action android:name="android.intent.action.VIEW" />
                           <category android:name="android.intent.category.DEFAULT" />

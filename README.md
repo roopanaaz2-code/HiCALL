@@ -10,6 +10,10 @@ HiCALL is an Android-first communication app with an original, IMO-inspired inte
 - A personal contact list and direct one-to-one plain-text conversations with Realtime updates
 - One-to-one audio/video call screens and call history
 - LiveKit room connection, local/remote video rendering, and microphone/camera controls
+- Realtime call-session updates so either participant ending a call closes the other participant's call screen
+- Screen-awake behavior during active calls and animated slide-to-answer / slide-to-hang-up controls
+- Optional per-device incoming ringtone selected from a local audio file (while the app is open)
+- Profile privacy-shield indicator and existing profile-picture upload/change/remove controls
 - Foreground incoming-call prompts using Supabase Realtime, with accept/decline/end actions
 - Private phone discovery that is explicitly opt-in and owner-controlled
 - Custom neon-blue HiCALL brand icon
@@ -34,7 +38,7 @@ These must belong to a separate HiCALL LiveKit project. LiveKit Cloud offers a f
 
 ## Incoming calls and device readiness
 
-- Incoming-call prompts work only while the app is open and connected to Realtime. Background/terminated-app alerts require Firebase Cloud Messaging and Android call-notification integration, which remain deferred.
+- Incoming-call prompts and the selected custom ringtone work while the app is open and connected to Realtime. Background/terminated-app alerts still require Firebase Cloud Messaging, a Firebase Android app configuration, secure FCM sender credentials, and Android call-notification integration. These are not configured in this repository yet.
 - LiveKit calling cannot be claimed as functional until all three secrets are installed and calls are tested between two Android devices on separate networks.
 
 ## Email confirmation deep link
