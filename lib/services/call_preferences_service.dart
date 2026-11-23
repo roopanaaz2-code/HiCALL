@@ -44,10 +44,14 @@ class CallPreferencesService {
   }
 
   static Future<void> playIncomingRingtone() async {
-    final path = await ringtonePath();
-    if (path == null || !await File(path).exists()) return;
-    await _player.setReleaseMode(ReleaseMode.loop);
-    await _player.play(DeviceFileSource(path));
+    try {
+      final path = await ringtonePath();
+      if (path == null || !await File(path).exists()) return;
+      await _player.setReleaseMode(ReleaseMode.loop);
+      await _player.play(DeviceFileSource(path));
+    } catch (_) {
+      // A ringtone failure must never prevent the incoming-call prompt.
+    }
   }
 
   static Future<void> stopIncomingRingtone() async {
