@@ -138,8 +138,19 @@ Deno.serve(async (req: Request) => {
       const { data: participant } = await admin.from("call_participants").select("call_id").eq("call_id", callId).eq("user_id", user.id).maybeSingle();
       if (!participant) return json({ error: "Not a call participant." }, 403);
       const now = new Date().toISOString();
-      await admin.from("call_sessions").update({ status: "ended", ended_at: now }).eq("id", callId);
-      await admin.from("call_participants").update({ left_at: now }).eq("call_id", callId);
+      const { error: endError } = await admin
+        .from("call_sessions")
+        .update({ status: "ended", ended_at: now })
+        .eq("id", callId)
+        .in("status", ["ringing", "active"]);
+      if (endError) return json({ error: "Unable to end this call." }, 503);
+
+      const { error: participantsError } = await admin
+        .from("call_participants")
+        .update({ left_at: now })
+        .eq("call_id", callId)
+        .is("left_at", null);
+      if (participantsError) return json({ error: "Call ended, but participant state could not be synchronized." }, 503);
       return json({ ok: true });
     }
     return json({ error: "Unsupported action." }, 400);
