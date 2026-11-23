@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/call_service.dart';
 import '../services/messaging_service.dart';
 import 'call_screen.dart';
+import '../widgets/profile_avatar.dart';
 
 class DirectChatScreen extends StatefulWidget {
   const DirectChatScreen({super.key, required this.conversationId, required this.otherProfile});
@@ -114,7 +115,7 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
         callType: type,
       );
       if (!mounted) { return; }
-      await Navigator.of(context).push(MaterialPageRoute(builder: (_) => CallScreen(credentials: credentials, remoteName: _name)));
+      await Navigator.of(context).push(MaterialPageRoute(builder: (_) => CallScreen(credentials: credentials, remoteName: _name, remoteAvatarPath: widget.otherProfile['avatar_path'] as String?)));
     } catch (e) {
       if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unable to start call: ${e.toString().replaceFirst('Exception: ', '')}'))); }
     }
@@ -135,12 +136,7 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
         titleSpacing: 0,
         title: Row(
           children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: colors.primaryContainer,
-              foregroundColor: colors.primary,
-              child: Text(_name.isEmpty ? 'H' : _name.substring(0, 1).toUpperCase(), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
-            ),
+            ProfileAvatar(path: widget.otherProfile['avatar_path'] as String?, initials: _name, radius: 18),
             const SizedBox(width: 10),
             Expanded(
               child: Column(

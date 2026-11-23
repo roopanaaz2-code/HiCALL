@@ -89,7 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final caller = await client
           .from('profiles')
-          .select('username, display_name')
+          .select('username, display_name, avatar_path')
           .eq('id', call['created_by'])
           .maybeSingle();
       if (!mounted) { return; }

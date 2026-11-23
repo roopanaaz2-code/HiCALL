@@ -43,6 +43,34 @@ class PhoneService {
     return row == null ? null : Map<String, dynamic>.from(row);
   }
 
+  Future<Map<String, dynamic>?> ownPrivateUnverifiedPhone() async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) return null;
+    final row = await _client
+        .from('user_private_phone_entries')
+        .select('phone_e164, updated_at')
+        .eq('user_id', userId)
+        .maybeSingle();
+    return row == null ? null : Map<String, dynamic>.from(row);
+  }
+
+  Future<void> saveOwnPrivateUnverifiedPhone(String value) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) throw const AuthException('Sign in to save your phone number.');
+    final phone = normalize(value);
+    await _client.from('user_private_phone_entries').upsert({
+      'user_id': userId,
+      'phone_e164': phone,
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    });
+  }
+
+  Future<void> removeOwnPrivateUnverifiedPhone() async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) throw const AuthException('Sign in to remove your phone number.');
+    await _client.from('user_private_phone_entries').delete().eq('user_id', userId);
+  }
+
   Future<Map<String, dynamic>?> searchByPhone(String value) async {
     final phone = normalize(value);
     final result = await _client.functions.invoke(

@@ -3,6 +3,7 @@ import '../services/call_history_service.dart';
 import '../services/call_service.dart';
 import 'call_screen.dart';
 import 'contacts_screen.dart';
+import '../widgets/profile_avatar.dart';
 
 class CallHistoryScreen extends StatefulWidget {
   const CallHistoryScreen({super.key});
@@ -65,7 +66,7 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
     try {
       final credentials = await CallService.instance.startCall(recipientId: profile['id'] as String, callType: type);
       if (!mounted) { return; }
-      await Navigator.of(context).push(MaterialPageRoute(builder: (_) => CallScreen(credentials: credentials, remoteName: _name(profile))));
+      await Navigator.of(context).push(MaterialPageRoute(builder: (_) => CallScreen(credentials: credentials, remoteName: _name(profile), remoteAvatarPath: profile['avatar_path'] as String?)));
     } catch (e) {
       if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unable to start call: ${e.toString().replaceFirst('Exception: ', '')}'))); }
     }
@@ -104,11 +105,7 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
                     margin: const EdgeInsets.only(top: 8),
                     child: ListTile(
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                      leading: CircleAvatar(
-                        backgroundColor: colors.primaryContainer,
-                        foregroundColor: colors.primary,
-                        child: Icon(isVideo ? Icons.videocam_rounded : Icons.call_rounded),
-                      ),
+                      leading: ProfileAvatar(path: profile['avatar_path'] as String?, initials: _name(profile), radius: 20),
                       title: Text(_name(profile), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
                       subtitle: Text('${outgoing ? 'Outgoing' : 'Incoming'} ${isVideo ? 'video' : 'audio'} · ${_status(call)}'),
                       trailing: Column(

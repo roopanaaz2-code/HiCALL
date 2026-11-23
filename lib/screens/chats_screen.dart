@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/messaging_service.dart';
 import 'contacts_screen.dart';
 import 'direct_chat_screen.dart';
+import '../widgets/profile_avatar.dart';
 
 class ChatsScreen extends StatefulWidget {
   const ChatsScreen({super.key});
@@ -120,12 +121,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                     margin: const EdgeInsets.only(bottom: 8),
                     child: ListTile(
                       contentPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
-                      leading: CircleAvatar(
-                        radius: 25,
-                        backgroundColor: colors.primaryContainer,
-                        foregroundColor: colors.primary,
-                        child: Text(name.isEmpty ? 'H' : name.substring(0, 1).toUpperCase(), style: const TextStyle(fontWeight: FontWeight.w800)),
-                      ),
+                      leading: ProfileAvatar(path: profile['avatar_path'] as String?, initials: name, radius: 25),
                       title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
                       subtitle: Padding(
                         padding: const EdgeInsets.only(top: 4),

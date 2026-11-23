@@ -1,7 +1,10 @@
+import 'dart:async';
+import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/phone_service.dart';
 import '../services/profile_service.dart';
+import '../widgets/profile_avatar.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -13,15 +16,20 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final _displayName = TextEditingController();
   final _username = TextEditingController();
+  final _picker = ImagePicker();
   Map<String, dynamic>? _phone;
+  Map<String, dynamic>? _privatePhone;
+  String? _avatarPath;
   bool _loading = true;
   bool _saving = false;
+  bool _avatarBusy = false;
   String? _error;
 
   @override
   void initState() {
     super.initState();
     _load();
+    unawaited(_recoverPickerResult());
   }
 
   @override
@@ -39,11 +47,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final profile = await ProfileService.instance.myProfile();
       final phone = await PhoneService.instance.ownVerifiedPhone();
+      final privatePhone = await PhoneService.instance.ownPrivateUnverifiedPhone();
       if (!mounted) { return; }
       _displayName.text = profile?['display_name'] as String? ?? '';
       _username.text = profile?['username'] as String? ?? '';
       setState(() {
         _phone = phone;
+        _privatePhone = privatePhone;
+        _avatarPath = profile?['avatar_path'] as String?;
         _loading = false;
       });
     } catch (_) {
@@ -52,6 +63,81 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _loading = false;
         _error = 'Profile details are temporarily unavailable. Please try again.';
       });
+    }
+  }
+
+  Future<void> _recoverPickerResult() async {
+    try {
+      final response = await _picker.retrieveLostData();
+      final files = response.files;
+      if (files != null && files.isNotEmpty) await _uploadAvatar(files.first);
+    } catch (_) {}
+  }
+
+  Future<void> _pickAvatar() async {
+    try {
+      final image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 1400, maxHeight: 1400);
+      if (image != null) await _uploadAvatar(image);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+    }
+  }
+
+  Future<void> _uploadAvatar(XFile image) async {
+    if (_avatarBusy) return;
+    setState(() => _avatarBusy = true);
+    try {
+      final path = await ProfileService.instance.uploadAvatar(image);
+      if (mounted) {
+        setState(() => _avatarPath = path);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile picture updated.')));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '').replaceFirst('FormatException: ', ''))));
+    } finally {
+      if (mounted) setState(() => _avatarBusy = false);
+    }
+  }
+
+  Future<void> _removeAvatar() async {
+    try {
+      await ProfileService.instance.removeAvatar();
+      if (mounted) setState(() => _avatarPath = null);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+    }
+  }
+
+  Future<void> _editPrivatePhone() async {
+    final controller = TextEditingController(text: _privatePhone?['phone_e164'] as String? ?? '');
+    final value = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Save SIM number privately'),
+        content: TextField(controller: controller, autofocus: true, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Number with country code', hintText: '+14155550123')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, controller.text.trim()), child: const Text('Save privately')),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (value == null) return;
+    try {
+      await PhoneService.instance.saveOwnPrivateUnverifiedPhone(value);
+      await _load();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Saved privately as unverified; it cannot be found in phone search.')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('FormatException: ', ''))));
+    }
+  }
+
+  Future<void> _removePrivatePhone() async {
+    try {
+      await PhoneService.instance.removeOwnPrivateUnverifiedPhone();
+      await _load();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
     }
   }
 
@@ -141,11 +227,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Center(
             child: Column(
               children: [
-                CircleAvatar(
-                  radius: 42,
-                  backgroundColor: colors.primaryContainer,
-                  child: Icon(Icons.person_rounded, size: 42, color: colors.primary),
-                ),
+                ProfileAvatar(path: _avatarPath, initials: _displayName.text.isEmpty ? 'H' : _displayName.text, radius: 42),
+                const SizedBox(height: 8),
+                Wrap(spacing: 6, children: [
+                  TextButton.icon(onPressed: _avatarBusy ? null : _pickAvatar, icon: _avatarBusy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.photo_library_outlined), label: Text(_avatarPath == null ? 'Add photo' : 'Change photo')),
+                  if (_avatarPath != null) TextButton.icon(onPressed: _avatarBusy ? null : _removeAvatar, icon: const Icon(Icons.delete_outline), label: const Text('Remove')),
+                ]),
                 const SizedBox(height: 12),
                 Text(
                   _displayName.text.isEmpty ? 'Your HiCALL profile' : _displayName.text,
@@ -243,6 +330,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          Card(margin: EdgeInsets.zero, child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('SIM number (no SMS code)', style: TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 6),
+            Text(_privatePhone == null ? 'Add a number for your own reference. It will be marked unverified and stay private; this does not enable search.' : '${_privatePhone!['phone_e164']}\nUnverified · visible only to you · excluded from phone search', style: TextStyle(color: colors.onSurfaceVariant, height: 1.4)),
+            const SizedBox(height: 8),
+            Wrap(spacing: 8, children: [
+              OutlinedButton.icon(onPressed: _editPrivatePhone, icon: const Icon(Icons.edit_outlined), label: Text(_privatePhone == null ? 'Add number' : 'Change number')),
+              if (_privatePhone != null) TextButton.icon(onPressed: _removePrivatePhone, icon: const Icon(Icons.delete_outline), label: const Text('Remove')),
+              if (_privatePhone != null && _phone == null) TextButton(onPressed: _addPhone, child: const Text('Verify for search')),
+            ]),
+          ]))),
           const SizedBox(height: 12),
           Text(
             'Your phone number is not shown on public profiles, contact cards, chats, or call screens. Supabase Auth may retain it for account-security use. SMS verification must be enabled by the service administrator.',

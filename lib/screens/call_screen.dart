@@ -5,16 +5,19 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../services/call_service.dart';
+import '../widgets/profile_avatar.dart';
 
 class CallScreen extends StatefulWidget {
   const CallScreen({
     super.key,
     required this.credentials,
     required this.remoteName,
+    this.remoteAvatarPath,
   });
 
   final CallCredentials credentials;
   final String remoteName;
+  final String? remoteAvatarPath;
 
   @override
   State<CallScreen> createState() => _CallScreenState();
@@ -349,7 +352,7 @@ class _CallScreenState extends State<CallScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _avatar(46, Icons.person),
+            _avatar(46),
             const SizedBox(height: 18),
             Text(
               widget.remoteName,
@@ -430,7 +433,7 @@ class _CallScreenState extends State<CallScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _avatar(58, Icons.person),
+                  _avatar(58),
                   const SizedBox(height: 22),
                   Text(
                     widget.remoteName,
@@ -457,13 +460,13 @@ class _CallScreenState extends State<CallScreen> {
     );
   }
 
-  Widget _avatar(double radius, IconData icon) {
-    return CircleAvatar(
-      radius: radius,
-      backgroundColor: const Color(0xFF183B67),
-      child: Icon(icon, size: radius, color: const Color(0xFF35D5E8)),
-    );
-  }
+  Widget _avatar(double radius) => ProfileAvatar(
+        path: widget.remoteAvatarPath,
+        initials: widget.remoteName,
+        radius: radius,
+        backgroundColor: const Color(0xFF183B67),
+        foregroundColor: const Color(0xFF35D5E8),
+      );
 
   Widget _statusPill() {
     return DecoratedBox(

@@ -7,6 +7,7 @@ import '../services/phone_service.dart';
 import '../services/profile_service.dart';
 import 'call_screen.dart';
 import 'direct_chat_screen.dart';
+import '../widgets/profile_avatar.dart';
 
 class ContactsScreen extends StatefulWidget {
   const ContactsScreen({super.key});
@@ -201,7 +202,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
       );
       if (!mounted) { return; }
       await Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => CallScreen(credentials: credentials, remoteName: _name(person)),
+        builder: (_) => CallScreen(credentials: credentials, remoteName: _name(person), remoteAvatarPath: person['avatar_path'] as String?),
       ));
     } catch (e) {
       if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unable to start call: ${e.toString().replaceFirst('Exception: ', '')}'))); }
@@ -342,11 +343,7 @@ class _PersonCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
           children: [
-            CircleAvatar(
-              backgroundColor: colors.primaryContainer,
-              foregroundColor: colors.primary,
-              child: Text(name.isEmpty ? 'H' : name.substring(0, 1).toUpperCase(), style: const TextStyle(fontWeight: FontWeight.w800)),
-            ),
+            ProfileAvatar(path: person['avatar_path'] as String?, initials: name, radius: 20),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

@@ -5,7 +5,7 @@ HiCALL is an Android-first communication app with an original, IMO-inspired inte
 ## Included scope
 
 - Email/password registration and sign-in through Supabase Auth
-- Username and display-name profiles
+- Username, display-name, and gallery-uploaded profile pictures (JPG/PNG/WebP, up to 5 MB)
 - Exact username search and optional, verified private phone lookup
 - A personal contact list and direct one-to-one plain-text conversations with Realtime updates
 - One-to-one audio/video call screens and call history
@@ -18,11 +18,11 @@ Out of scope: group chats, voice rooms, social feeds, stories, livestreaming, gi
 
 ## Backend
 
-A dedicated Supabase project has been provisioned for HiCALL in `ap-south-1` (Mumbai). The initial schema, row-level security policies, profile-on-signup trigger, and Realtime publication for call participants are applied. The additive first-release migration is now applied; it adds private verified-phone discovery, contacts, direct messages, message Realtime, and a server-side search limiter.
+A dedicated Supabase project has been provisioned for HiCALL in `ap-south-1` (Mumbai). The initial schema, row-level security policies, profile-on-signup trigger, and Realtime publication for call participants are applied. The additive migrations add verified-phone discovery, contacts, direct messages, message Realtime, a server-side search limiter, an owner-only unverified phone-entry table, and profile-picture storage.
 
 The `search-users`, `manage-phone`, and `call-history` Edge Functions are deployed with JWT verification. `call-control` is deployed at version 2 and checks saved-contact and block relationships before call start/join. These functions validate the user's Supabase session, limit phone searches, and keep service-role access server-side.
 
-Phone verification will not work until the project administrator enables phone authentication and configures a Supabase-compatible SMS provider. Existing verified Auth phone values are kept hidden from discovery unless their owner explicitly enables search. Supabase Auth may retain a phone value for account-security use when the owner pauses HiCALL lookup.
+A SIM number may also be saved without an SMS code in a separate owner-only table. This entry is explicitly unverified and is never considered by phone search. Phone verification will not work until the project administrator enables phone authentication and configures a Supabase-compatible SMS provider. Existing verified Auth phone values are kept hidden from discovery unless their owner explicitly enables search. Supabase Auth may retain a phone value for account-security use when the owner pauses HiCALL lookup.
 
 The deployed `call-control` Edge Function issues short-lived LiveKit access tokens. It requires these protected server-side secrets before calling can work:
 
@@ -30,7 +30,7 @@ The deployed `call-control` Edge Function issues short-lived LiveKit access toke
 - `LIVEKIT_API_KEY`
 - `LIVEKIT_API_SECRET`
 
-These must belong to a separate HiCALL LiveKit project. Never reuse NightLink's credentials and never place LiveKit secrets or the Supabase service-role key in the Android app or GitHub source.
+These must belong to a separate HiCALL LiveKit project. LiveKit Cloud offers a free Build tier, but RTC use is metered and allowances are capped; verify current limits in the project dashboard. Until the administrator creates/configures that project and sets all three secrets, the call endpoint returns HTTP 503. Never reuse NightLink's credentials and never place LiveKit secrets or the Supabase service-role key in the Android app, chat, or GitHub source.
 
 ## Incoming calls and device readiness
 
