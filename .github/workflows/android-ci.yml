@@ -50,13 +50,13 @@ jobs:
           s = settings.read_text()
           marker = 'id("com.google.gms.google-services") version "4.4.4" apply false'
           if marker not in s:
-              s = s.replace("plugins {", "plugins {\\n    " + marker, 1)
+              s = s.replace("plugins {", "plugins {\n    " + marker, 1)
           settings.write_text(s)
           app = Path("android/app/build.gradle.kts")
           a = app.read_text()
           plugin = 'id("com.google.gms.google-services")'
           if plugin not in a:
-              a = a.replace("plugins {", "plugins {\\n    " + plugin, 1)
+              a = a.replace("plugins {", "plugins {\n    " + plugin, 1)
           app.write_text(a)
           PY
 
@@ -79,7 +79,7 @@ jobs:
           ]
           for item in permissions:
               if item not in s:
-                  s = s.replace("<application", item + "\\n    <application", 1)
+                  s = s.replace("<application", item + "\n    <application", 1)
           s = s.replace('android:label="hicall"', 'android:label="HiCALL"')
           deep_link = """            <intent-filter>
                           <action android:name="android.intent.action.VIEW" />
@@ -88,7 +88,7 @@ jobs:
                           <data android:scheme="hicall" android:host="auth-callback" />
                       </intent-filter>"""
           if 'android:scheme="hicall"' not in s:
-              s = s.replace("</activity>", deep_link + "\\n        </activity>", 1)
+              s = s.replace("</activity>", deep_link + "\n        </activity>", 1)
           p.write_text(s)
           gradle = Path("android/app/build.gradle.kts")
           if gradle.exists():
