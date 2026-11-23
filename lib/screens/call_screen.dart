@@ -282,7 +282,7 @@ class _CallScreenState extends State<CallScreen> {
     final channel = _callStateChannel;
     _callStateChannel = null;
     if (channel != null) {
-      unawaited(Supabase.instance.client.removeChannel(channel));
+      unawaited(Supabase.instance.client.removeChannel(channel).then<void>((_) {}));
     }
     unawaited(WakelockPlus.disable());
     unawaited(_disposeRoom());
