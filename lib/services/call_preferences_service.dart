@@ -7,7 +7,6 @@ import 'package:path_provider/path_provider.dart';
 class CallPreferencesService {
   CallPreferencesService._();
 
-  static const _ringtoneKey = 'hicall.incoming_ringtone_path';
   static final AudioPlayer _player = AudioPlayer();
 
   static Future<File> _settingsFile() async {
