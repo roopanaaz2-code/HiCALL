@@ -3,9 +3,12 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../services/call_service.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/slide_action.dart';
 
 class CallScreen extends StatefulWidget {
   const CallScreen({
@@ -26,6 +29,7 @@ class CallScreen extends StatefulWidget {
 class _CallScreenState extends State<CallScreen> {
   late final Room room;
   EventsListener<RoomEvent>? _roomListener;
+  RealtimeChannel? _callStateChannel;
   Timer? _callTimer;
   DateTime? _connectedAt;
   VideoTrack? _remoteVideoTrack;
@@ -45,7 +49,12 @@ class _CallScreenState extends State<CallScreen> {
   void initState() {
     super.initState();
     room = Room();
+    unawaited(WakelockPlus.enable());
     _listenToRoom();
+    _callStateChannel = CallService.instance.watchCallStatus(
+      widget.credentials.callId,
+      _onCallStatus,
+    );
     unawaited(connect());
   }
 
@@ -83,6 +92,26 @@ class _CallScreenState extends State<CallScreen> {
           _remoteVideoTrack = null;
         });
       });
+  }
+
+  void _onCallStatus(String status) {
+    if (!mounted || ending) return;
+    if (status == 'ended' ||
+        status == 'declined' ||
+        status == 'missed' ||
+        status == 'cancelled') {
+      unawaited(_finishRemoteCall());
+    }
+  }
+
+  Future<void> _finishRemoteCall() async {
+    if (!mounted || ending) return;
+    setState(() => ending = true);
+    _callTimer?.cancel();
+    try {
+      await room.disconnect();
+    } catch (_) {}
+    if (mounted) Navigator.of(context).pop();
   }
 
   Future<void> connect() async {
@@ -227,10 +256,12 @@ class _CallScreenState extends State<CallScreen> {
     setState(() => ending = true);
     _callTimer?.cancel();
     try {
-      await room.disconnect();
-    } catch (_) {}
-    try {
       await CallService.instance.endCall(widget.credentials.callId);
+    } catch (_) {
+      // Always release local media even if the network is unavailable.
+    }
+    try {
+      await room.disconnect();
     } catch (_) {}
     if (mounted) Navigator.of(context).pop();
   }
@@ -248,6 +279,12 @@ class _CallScreenState extends State<CallScreen> {
   @override
   void dispose() {
     _callTimer?.cancel();
+    final channel = _callStateChannel;
+    _callStateChannel = null;
+    if (channel != null) {
+      unawaited(Supabase.instance.client.removeChannel(channel));
+    }
+    unawaited(WakelockPlus.disable());
     unawaited(_disposeRoom());
     super.dispose();
   }
@@ -549,19 +586,11 @@ class _CallScreenState extends State<CallScreen> {
             ],
           ),
           const SizedBox(height: 22),
-          SizedBox(
-            width: double.infinity,
-            height: 54,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFD9364F),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-              onPressed: ending ? null : () => unawaited(hangUp()),
-              icon: const Icon(Icons.call_end),
-              label: Text(ending ? 'Ending call…' : 'End call'),
-            ),
+          SlideAction(
+            label: ending ? 'Ending call…' : 'Slide to hang up',
+            icon: Icons.call_end_rounded,
+            glowColor: const Color(0xFFFF4D64),
+            onCompleted: () => unawaited(hangUp()),
           ),
         ],
       ),
