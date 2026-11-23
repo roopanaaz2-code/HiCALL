@@ -35,11 +35,21 @@ class CallPreferencesService {
       throw const FormatException('Choose MP3, M4A, AAC, WAV, OGG, 3GP or AMR audio.');
     }
 
+    final previousPath = await ringtonePath();
     final directory = await getApplicationDocumentsDirectory();
     final destination = File('${directory.path}/hicall_incoming_ringtone.$extension');
-    if (await destination.exists()) await destination.delete();
-    await source.copy(destination.path);
+    if (source.absolute.path != destination.absolute.path) {
+      if (await destination.exists()) await destination.delete();
+      await source.copy(destination.path);
+    }
     await _preferences.setString(_ringtoneKey, destination.path);
+    if (previousPath != null &&
+        previousPath != destination.path &&
+        await File(previousPath).exists()) {
+      try {
+        await File(previousPath).delete();
+      } catch (_) {}
+    }
     return destination.path;
   }
 
@@ -73,5 +83,10 @@ class CallPreferencesService {
     }
   }
 
-  static Future<void> previewRingtone() => playIncomingRingtone();
+  static Future<void> previewRingtone() async {
+    final path = await ringtonePath();
+    if (path == null || !await File(path).exists()) return;
+    await _player.setReleaseMode(ReleaseMode.release);
+    await _player.play(DeviceFileSource(path));
+  }
 }
