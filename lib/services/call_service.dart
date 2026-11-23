@@ -35,6 +35,29 @@ class CallService {
     if (response.status < 200 || response.status >= 300) { throw Exception('Unable to decline call.'); }
   }
 
+  RealtimeChannel watchCallStatus(
+    String callId,
+    void Function(String status) onStatus,
+  ) {
+    return _client
+        .channel('hicall-call-state-$callId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'call_sessions',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'id',
+            value: callId,
+          ),
+          callback: (payload) {
+            final status = payload.newRecord['status'] as String?;
+            if (status != null) onStatus(status);
+          },
+        )
+        .subscribe();
+  }
+
   Future<void> endCall(String callId) async {
     final response = await _client.functions.invoke(AppConfig.callControlFunction,
       body: {'action': 'end', 'call_id': callId});
