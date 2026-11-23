@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1050010768395",
+    "project_id": "hicall-e85ab",
+    "storage_bucket": "hicall-e85ab.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1050010768395:android:9c61f4d629b27efe6ce30e",
+        "android_client_info": {
+          "package_name": "com.hicall.hicall"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDeCB1nHd9T59GYgOOWf3iXYseXjsvGs90"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
