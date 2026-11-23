@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/phone_service.dart';
 import '../services/profile_service.dart';
+import '../services/call_preferences_service.dart';
 import '../widgets/profile_avatar.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -20,6 +21,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Map<String, dynamic>? _phone;
   Map<String, dynamic>? _privatePhone;
   String? _avatarPath;
+  String? _ringtonePath;
   bool _loading = true;
   bool _saving = false;
   bool _avatarBusy = false;
@@ -48,6 +50,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final profile = await ProfileService.instance.myProfile();
       final phone = await PhoneService.instance.ownVerifiedPhone();
       final privatePhone = await PhoneService.instance.ownPrivateUnverifiedPhone();
+      final ringtonePath = await CallPreferencesService.ringtonePath();
       if (!mounted) { return; }
       _displayName.text = profile?['display_name'] as String? ?? '';
       _username.text = profile?['username'] as String? ?? '';
@@ -55,6 +58,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _phone = phone;
         _privatePhone = privatePhone;
         _avatarPath = profile?['avatar_path'] as String?;
+        _ringtonePath = ringtonePath;
         _loading = false;
       });
     } catch (_) {
@@ -106,6 +110,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')))); }
     }
+  }
+
+  Future<void> _chooseRingtone() async {
+    try {
+      final path = await CallPreferencesService.chooseRingtone();
+      if (path == null || !mounted) return;
+      setState(() => _ringtonePath = path);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Incoming ringtone saved.')),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('FormatException: ', ''))),
+        );
+      }
+    }
+  }
+
+  Future<void> _previewRingtone() async {
+    try {
+      await CallPreferencesService.previewRingtone();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not play ringtone: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _resetRingtone() async {
+    await CallPreferencesService.clearRingtone();
+    if (mounted) setState(() => _ringtonePath = null);
   }
 
   Future<void> _editPrivatePhone() async {
@@ -234,9 +272,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   if (_avatarPath != null) TextButton.icon(onPressed: _avatarBusy ? null : _removeAvatar, icon: const Icon(Icons.delete_outline), label: const Text('Remove')),
                 ]),
                 const SizedBox(height: 12),
-                Text(
-                  _displayName.text.isEmpty ? 'Your HiCALL profile' : _displayName.text,
-                  style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        _displayName.text.isEmpty ? 'Your HiCALL profile' : _displayName.text,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                    const SizedBox(width: 7),
+                    Tooltip(
+                      message: 'Your email and phone details are private.',
+                      child: Icon(Icons.shield_rounded, color: colors.primary, size: 20),
+                    ),
+                  ],
                 ),
                 if (user?.email != null) ...[
                   const SizedBox(height: 3),
@@ -268,6 +319,60 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.check_rounded),
             label: const Text('Save profile'),
+          ),
+          const SizedBox(height: 26),
+          _sectionTitle(context, 'Calling experience'),
+          const SizedBox(height: 10),
+          Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.notifications_active_outlined, color: colors.primary),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Text('Incoming call ringtone', style: TextStyle(fontWeight: FontWeight.w700)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _ringtonePath == null
+                        ? 'Choose an audio file to use when a call arrives while HiCALL is open.'
+                        : 'Selected: ${_ringtonePath!.split('/').last}',
+                    style: TextStyle(color: colors.onSurfaceVariant, height: 1.35),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _chooseRingtone,
+                        icon: const Icon(Icons.music_note_rounded),
+                        label: Text(_ringtonePath == null ? 'Choose ringtone' : 'Change ringtone'),
+                      ),
+                      if (_ringtonePath != null)
+                        OutlinedButton.icon(
+                          onPressed: _previewRingtone,
+                          icon: const Icon(Icons.play_arrow_rounded),
+                          label: const Text('Preview'),
+                        ),
+                      if (_ringtonePath != null)
+                        TextButton.icon(
+                          onPressed: _resetRingtone,
+                          icon: const Icon(Icons.restart_alt_rounded),
+                          label: const Text('Reset'),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
           const SizedBox(height: 26),
           _sectionTitle(context, 'Private phone number'),
