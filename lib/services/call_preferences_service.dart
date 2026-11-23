@@ -3,16 +3,24 @@ import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class CallPreferencesService {
   CallPreferencesService._();
 
   static const _ringtoneKey = 'hicall.incoming_ringtone_path';
-  static final SharedPreferencesAsync _preferences = SharedPreferencesAsync();
   static final AudioPlayer _player = AudioPlayer();
 
-  static Future<String?> ringtonePath() => _preferences.getString(_ringtoneKey);
+  static Future<File> _settingsFile() async {
+    final directory = await getApplicationDocumentsDirectory();
+    return File('${directory.path}/hicall_call_preferences.txt');
+  }
+
+  static Future<String?> ringtonePath() async {
+    final settings = await _settingsFile();
+    if (!await settings.exists()) return null;
+    final path = (await settings.readAsString()).trim();
+    return path.isEmpty ? null : path;
+  }
 
   static Future<String?> chooseRingtone() async {
     final picked = await FilePicker.pickFile(type: FileType.audio);
@@ -42,7 +50,8 @@ class CallPreferencesService {
       if (await destination.exists()) await destination.delete();
       await source.copy(destination.path);
     }
-    await _preferences.setString(_ringtoneKey, destination.path);
+    final settings = await _settingsFile();
+    await settings.writeAsString(destination.path, flush: true);
     if (previousPath != null &&
         previousPath != destination.path &&
         await File(previousPath).exists()) {
@@ -75,7 +84,8 @@ class CallPreferencesService {
   static Future<void> clearRingtone() async {
     final path = await ringtonePath();
     await stopIncomingRingtone();
-    await _preferences.remove(_ringtoneKey);
+    final settings = await _settingsFile();
+    if (await settings.exists()) await settings.delete();
     if (path != null && await File(path).exists()) {
       try {
         await File(path).delete();
