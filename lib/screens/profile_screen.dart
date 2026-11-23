@@ -70,21 +70,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final response = await _picker.retrieveLostData();
       final files = response.files;
-      if (files != null && files.isNotEmpty) await _uploadAvatar(files.first);
+      if (files != null && files.isNotEmpty) { await _uploadAvatar(files.first); }
     } catch (_) {}
   }
 
   Future<void> _pickAvatar() async {
     try {
       final image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 1400, maxHeight: 1400);
-      if (image != null) await _uploadAvatar(image);
+      if (image != null) { await _uploadAvatar(image); }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')))); }
     }
   }
 
   Future<void> _uploadAvatar(XFile image) async {
-    if (_avatarBusy) return;
+    if (_avatarBusy) { return; }
     setState(() => _avatarBusy = true);
     try {
       final path = await ProfileService.instance.uploadAvatar(image);
@@ -93,18 +93,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile picture updated.')));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '').replaceFirst('FormatException: ', ''))));
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '').replaceFirst('FormatException: ', '')))); }
     } finally {
-      if (mounted) setState(() => _avatarBusy = false);
+      if (mounted) { setState(() => _avatarBusy = false); }
     }
   }
 
   Future<void> _removeAvatar() async {
     try {
       await ProfileService.instance.removeAvatar();
-      if (mounted) setState(() => _avatarPath = null);
+      if (mounted) { setState(() => _avatarPath = null); }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')))); }
     }
   }
 
@@ -122,13 +122,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
     controller.dispose();
-    if (value == null) return;
+    if (value == null) { return; }
     try {
       await PhoneService.instance.saveOwnPrivateUnverifiedPhone(value);
       await _load();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Saved privately as unverified; it cannot be found in phone search.')));
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Saved privately as unverified; it cannot be found in phone search.'))); }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('FormatException: ', ''))));
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('FormatException: ', '')))); }
     }
   }
 
@@ -137,7 +137,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await PhoneService.instance.removeOwnPrivateUnverifiedPhone();
       await _load();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')))); }
     }
   }
 

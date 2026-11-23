@@ -11,7 +11,7 @@ class ProfileService {
 
   Future<List<Map<String, dynamic>>> searchUsers(String query) async {
     final value = query.trim().replaceFirst(RegExp(r'^@'), '');
-    if (!RegExp(r'^[A-Za-z0-9_]{3,24}$').hasMatch(value)) return [];
+    if (!RegExp(r'^[A-Za-z0-9_]{3,24}$').hasMatch(value)) { return []; }
     final rows = await _client
         .from('profiles')
         .select('id, username, display_name, avatar_path')
@@ -23,7 +23,7 @@ class ProfileService {
 
   Future<Map<String, dynamic>?> myProfile() async {
     final id = _client.auth.currentUser?.id;
-    if (id == null) return null;
+    if (id == null) { return null; }
     return await _client
         .from('profiles')
         .select('id, username, display_name, avatar_path')
@@ -36,7 +36,7 @@ class ProfileService {
     required String displayName,
   }) async {
     final id = _client.auth.currentUser?.id;
-    if (id == null) throw const AuthException('Sign in to edit your profile.');
+    if (id == null) { throw const AuthException('Sign in to edit your profile.'); }
     final cleanUsername = username.trim();
     final cleanDisplayName = displayName.trim();
     if (!RegExp(r'^[A-Za-z0-9_]{3,24}$').hasMatch(cleanUsername)) {
@@ -60,11 +60,11 @@ class ProfileService {
 
   Future<String> uploadAvatar(XFile photo) async {
     final id = _client.auth.currentUser?.id;
-    if (id == null) throw const AuthException('Sign in to change your profile picture.');
+    if (id == null) { throw const AuthException('Sign in to change your profile picture.'); }
     final extension = photo.name.split('.').last.toLowerCase();
     const mimeTypes = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'webp': 'image/webp'};
     final contentType = mimeTypes[extension];
-    if (contentType == null) throw const FormatException('Choose a JPG, PNG or WebP image.');
+    if (contentType == null) { throw const FormatException('Choose a JPG, PNG or WebP image.'); }
     final bytes = await photo.readAsBytes();
     if (bytes.isEmpty || bytes.length > _maxAvatarBytes) {
       throw const FormatException('Choose an image smaller than 5 MB.');
@@ -90,7 +90,7 @@ class ProfileService {
 
   Future<void> removeAvatar() async {
     final id = _client.auth.currentUser?.id;
-    if (id == null) throw const AuthException('Sign in to change your profile picture.');
+    if (id == null) { throw const AuthException('Sign in to change your profile picture.'); }
     final oldPath = (await myProfile())?['avatar_path'] as String?;
     await _client.from('profiles').update({
       'avatar_path': null,
