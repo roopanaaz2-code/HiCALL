@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
 import '../services/call_service.dart';
 import '../services/call_preferences_service.dart';
+import '../services/firebase_push_service.dart';
 import 'call_history_screen.dart';
 import 'call_screen.dart';
 import 'chats_screen.dart';
@@ -21,6 +22,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int selectedIndex = 0;
   RealtimeChannel? _incomingChannel;
+  StreamSubscription<String>? _openedCallSubscription;
   final Set<String> _handledCalls = {};
   final Set<String> _processingCalls = {};
 
@@ -30,6 +32,12 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _listenForIncomingCalls();
+    _openedCallSubscription = FirebasePushService.instance.openedCalls.listen((id) {
+      unawaited(_handleIncomingCall(id));
+    });
+    final pendingCallId = FirebasePushService.instance.takePendingCallId();
+    if (pendingCallId != null) unawaited(_handleIncomingCall(pendingCallId));
+    unawaited(FirebasePushService.instance.registerForCurrentUser());
     unawaited(_checkPendingIncomingCalls());
   }
 
@@ -164,6 +172,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    unawaited(_openedCallSubscription?.cancel());
     unawaited(_removeIncomingChannel());
     super.dispose();
   }
