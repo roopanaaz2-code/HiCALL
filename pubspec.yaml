@@ -30,6 +30,7 @@ flutter:
   assets:
     - assets/hicall_icon.svg
     - assets/hicall_icon.png
+    - shorebird.yaml
 
 flutter_launcher_icons:
   android: true
