@@ -339,6 +339,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             label: const Text('Save profile'),
           ),
           const SizedBox(height: 26),
+          _sectionTitle(context, 'Settings & feedback'),
+          const SizedBox(height: 10),
           _sectionTitle(context, 'App background'),
           const SizedBox(height: 10),
           Card(
