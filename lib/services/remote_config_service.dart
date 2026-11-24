@@ -36,7 +36,7 @@ class RemoteConfigService {
   dynamic getValue(String key) => values.value[key];
 
   /// Refreshes configuration with a short timeout and retains safe defaults
-  /// (or the last known values) if the network or backend is unavailable.
+  /// (or settings already loaded during this app session) if the network or backend is unavailable.
   Future<void> refresh({
     Duration timeout = const Duration(seconds: 4),
   }) async {
