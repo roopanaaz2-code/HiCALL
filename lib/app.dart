@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
+import 'widgets/app_background.dart';
 
 class HiCallApp extends StatelessWidget {
   const HiCallApp({super.key});
@@ -23,9 +24,9 @@ class HiCallApp extends StatelessWidget {
       useMaterial3: true,
       brightness: brightness,
       colorScheme: scheme,
-      scaffoldBackgroundColor: page,
+      scaffoldBackgroundColor: Colors.transparent,
       appBarTheme: AppBarTheme(
-        backgroundColor: page,
+        backgroundColor: Colors.transparent,
         foregroundColor: isDark ? Colors.white : const Color(0xFF14243B),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
@@ -82,6 +83,16 @@ class HiCallApp extends StatelessWidget {
         theme: _theme(Brightness.light),
         darkTheme: _theme(Brightness.dark),
         themeMode: ThemeMode.system,
+        builder: (context, child) => ValueListenableBuilder<String>(
+          valueListenable: AppBackground.theme,
+          builder: (context, selectedTheme, _) => Stack(
+            fit: StackFit.expand,
+            children: [
+              HiCallBackground(theme: selectedTheme),
+              if (child != null) child,
+            ],
+          ),
+        ),
         home: StreamBuilder<AuthState>(
           stream: Supabase.instance.client.auth.onAuthStateChange,
           builder: (context, snapshot) => Supabase.instance.client.auth.currentSession == null
