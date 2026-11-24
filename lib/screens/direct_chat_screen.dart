@@ -136,7 +136,7 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Chat cleared for your account.')));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not clear chat: ${e.toString().replaceFirst('Exception: ', '')}')));
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not clear chat: ${e.toString().replaceFirst('Exception: ', '')}'))); }
     }
   }
 
