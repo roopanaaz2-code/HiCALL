@@ -43,7 +43,14 @@ keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 
 """
 if "val keystoreProperties = Properties()" not in app_text:
-    app_text = app_text.replace("plugins {", properties_block + "plugins {", 1)
+    plugins_start = app_text.find("plugins {")
+    if plugins_start < 0:
+        raise SystemExit("Generated Gradle template has no plugins block")
+    plugins_end = app_text.find("\\n}", plugins_start)
+    if plugins_end < 0:
+        raise SystemExit("Unable to locate end of generated plugins block")
+    plugins_end += 2
+    app_text = app_text[:plugins_end] + "\\n\\n" + properties_block + app_text[plugins_end:]
 
 signing_block = """    signingConfigs {
         create("release") {
