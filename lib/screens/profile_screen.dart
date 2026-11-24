@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/phone_service.dart';
@@ -321,6 +322,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.check_rounded),
             label: const Text('Save profile'),
+          ),
+          const SizedBox(height: 24),
+          _sectionTitle(context, 'Settings & feedback'),
+          const SizedBox(height: 10),
+          Card(
+            margin: EdgeInsets.zero,
+            child: ListTile(
+              leading: Icon(Icons.mail_outline_rounded, color: colors.primary),
+              title: const Text('Contact us'),
+              subtitle: const Text('roopanaaz2@gmail.com'),
+              trailing: const Icon(Icons.copy_rounded),
+              onTap: () async {
+                await Clipboard.setData(const ClipboardData(text: 'roopanaaz2@gmail.com'));
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Feedback email copied. Open your email app to send feedback.')),
+                  );
+                }
+              },
+            ),
           ),
           const SizedBox(height: 26),
           _sectionTitle(context, 'Calling experience'),
