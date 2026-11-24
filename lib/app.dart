@@ -92,7 +92,7 @@ class HiCallApp extends StatelessWidget {
             return Stack(
               fit: StackFit.expand,
               children: [
-                if (child != null) child,
+                ?child,
                 if (announcementEnabled &&
                     announcement is String &&
                     announcement.trim().isNotEmpty &&
