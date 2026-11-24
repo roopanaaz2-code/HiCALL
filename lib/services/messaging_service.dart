@@ -104,13 +104,12 @@ class MessagingService {
   }
 
   Future<DateTime> clearConversation(String conversationId) async {
-    final now = DateTime.now().toUtc();
-    final row = await _client.from('conversation_clears').upsert({
-      'user_id': _userId,
-      'conversation_id': conversationId,
-      'cleared_at': now.toIso8601String(),
-    }, onConflict: 'user_id,conversation_id').select('cleared_at').single();
-    return DateTime.parse(row['cleared_at'] as String);
+    final result = await _client.rpc(
+      'clear_hicall_conversation',
+      params: {'p_conversation_id': conversationId},
+    );
+    if (result is! String) throw Exception('Unable to confirm chat clear time.');
+    return DateTime.parse(result);
   }
 
   Future<List<Map<String, dynamic>>> listMessages(String conversationId, {DateTime? after}) async {
