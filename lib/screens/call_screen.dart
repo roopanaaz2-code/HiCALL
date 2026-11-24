@@ -28,6 +28,7 @@ class CallScreen extends StatefulWidget {
 
 class _CallScreenState extends State<CallScreen> {
   late final Room room;
+  late CallCredentials _credentials;
   EventsListener<RoomEvent>? _roomListener;
   RealtimeChannel? _callStateChannel;
   Timer? _callTimer;
@@ -49,6 +50,7 @@ class _CallScreenState extends State<CallScreen> {
   void initState() {
     super.initState();
     room = Room();
+    _credentials = widget.credentials;
     unawaited(WakelockPlus.enable());
     _listenToRoom();
     _callStateChannel = CallService.instance.watchCallStatus(
@@ -116,6 +118,12 @@ class _CallScreenState extends State<CallScreen> {
 
   Future<void> connect() async {
     try {
+      if (_credentials.token.isEmpty) {
+        if (mounted) setState(() { connecting = true; connected = false; });
+        await CallService.instance.waitForAcceptance(_credentials.callId);
+        if (!mounted || ending) return;
+        _credentials = await CallService.instance.joinCall(_credentials.callId);
+      }
       final micPermission = await Permission.microphone.request();
       if (!micPermission.isGranted) {
         throw _PermissionFailure(
@@ -137,7 +145,7 @@ class _CallScreenState extends State<CallScreen> {
       }
       if (!mounted || ending) return;
 
-      await room.connect(widget.credentials.serverUrl, widget.credentials.token);
+      await room.connect(_credentials.serverUrl, _credentials.token);
       if (!mounted || ending) {
         try {
           await room.disconnect();
@@ -292,7 +300,7 @@ class _CallScreenState extends State<CallScreen> {
   String get _statusLabel {
     if (ending) return 'Ending call…';
     if (reconnecting) return 'Reconnecting…';
-    if (connecting) return 'Connecting…';
+    if (connecting) return widget.credentials.token.isEmpty ? 'Waiting for answer…' : 'Connecting…';
     if (connected) return 'Connected';
     return error == null ? 'Call ended' : 'Unable to connect';
   }
@@ -591,6 +599,13 @@ class _CallScreenState extends State<CallScreen> {
             icon: Icons.call_end_rounded,
             glowColor: const Color(0xFFFF4D64),
             onCompleted: () => unawaited(hangUp()),
+          ),
+          const SizedBox(height: 10),
+          WaterRippleButton(
+            label: 'Hang up',
+            icon: Icons.call_end_rounded,
+            color: const Color(0xFFE53955),
+            onPressed: ending ? null : () => unawaited(hangUp()),
           ),
         ],
       ),
