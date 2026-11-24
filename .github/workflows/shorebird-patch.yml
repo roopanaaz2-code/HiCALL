@@ -1,0 +1,100 @@
+name: HiCALL Shorebird Patch
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: Exact installed Shorebird release version (for example 1.0.0+1)
+        required: true
+        type: string
+      track:
+        description: Start with staging; promote to stable only after testing
+        required: true
+        type: choice
+        options:
+          - staging
+          - stable
+        default: staging
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hicall-shorebird-patch-${{ inputs.release_version }}-${{ inputs.track }}
+  cancel-in-progress: false
+
+jobs:
+  shorebird-patch:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
+      RELEASE_VERSION: ${{ inputs.release_version }}
+      PATCH_TRACK: ${{ inputs.track }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify Shorebird app and signing secrets
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$SHOREBIRD_TOKEN" || { echo "::error::Add repository secret SHOREBIRD_TOKEN."; exit 1; }
+          test -s shorebird.yaml || { echo "::error::shorebird.yaml is missing. Run shorebird init and commit it."; exit 1; }
+          test -n "$KEYSTORE_BASE64" && test -n "$KEYSTORE_PASSWORD" && test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD" || {
+            echo "::error::The persistent Android signing secrets are required for Shorebird patches."; exit 1;
+          }
+          [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+\+[0-9]+$ ]] || {
+            echo "::error::Enter a version such as 1.0.0+1."; exit 1;
+          }
+
+      - name: Set up Shorebird
+        uses: shorebirdtech/setup-shorebird@v1
+        with:
+          cache: true
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Generate Android platform files with Shorebird Flutter
+        run: shorebird flutter create --platforms=android --org com.hicall --project-name hicall .
+
+      - name: Configure persistent Android signing key
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          mkdir -p android/app
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
+          cat > android/key.properties <<EOF
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=app/upload-keystore.jks
+          EOF
+          chmod 600 android/key.properties android/app/upload-keystore.jks
+
+      - name: Prepare Firebase, manifest, Gradle mirror, and signing
+        run: python3 scripts/prepare_shorebird_android.py
+
+      - name: Resolve packages, analyze, and test
+        run: |
+          shorebird flutter pub get
+          shorebird flutter analyze --fatal-infos
+          shorebird flutter test
+
+      - name: Publish Shorebird patch
+        run: shorebird patch android --release-version "$RELEASE_VERSION" --track "$PATCH_TRACK"
