@@ -81,7 +81,7 @@ class HiCallApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: _theme(Brightness.light),
         darkTheme: _theme(Brightness.dark),
-        themeMode: ThemeMode.system,
+        themeMode: ThemeMode.dark,
         builder: (context, child) => ValueListenableBuilder<String>(
           valueListenable: AppBackground.theme,
           builder: (context, selectedTheme, _) => Stack(
