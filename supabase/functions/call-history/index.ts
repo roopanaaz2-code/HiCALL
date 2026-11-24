@@ -37,15 +37,19 @@ Deno.serve(async (req: Request) => {
     const admin = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    const { data: participation, error: participationError } = await admin
-      .from("call_participants")
-      .select("call_id, invited_at, joined_at, left_at")
-      .eq("user_id", user.id)
-      .order("invited_at", { ascending: false })
-      .limit(100);
-    if (participationError) return json({ error: "Unable to load call history." }, 503);
+    const [{ data: participation, error: participationError }, { data: clearMarker, error: clearMarkerError }] = await Promise.all([
+      admin.from("call_participants")
+        .select("call_id, invited_at, joined_at, left_at")
+        .eq("user_id", user.id)
+        .order("invited_at", { ascending: false })
+        .limit(100),
+      admin.from("call_history_clears").select("cleared_at").eq("user_id", user.id).maybeSingle(),
+    ]);
+    if (participationError || clearMarkerError) return json({ error: "Unable to load call history." }, 503);
+    const clearedAt = clearMarker?.cleared_at ? Date.parse(clearMarker.cleared_at as string) : 0;
+    const visibleParticipation = (participation ?? []).filter((row) => Date.parse(row.invited_at as string) > clearedAt);
 
-    const callIds = [...new Set((participation ?? []).map((row) => row.call_id as string))];
+    const callIds = [...new Set(visibleParticipation.map((row) => row.call_id as string))];
     if (callIds.length === 0) return json({ calls: [] });
 
     const [{ data: sessions, error: sessionsError }, { data: participants, error: participantsError }] = await Promise.all([
@@ -71,7 +75,7 @@ Deno.serve(async (req: Request) => {
     if (profilesError) return json({ error: "Unable to load call history." }, 503);
 
     const profileById = new Map((profiles ?? []).map((profile) => [profile.id as string, profile]));
-    const participationByCall = new Map((participation ?? []).map((row) => [row.call_id as string, row]));
+    const participationByCall = new Map(visibleParticipation.map((row) => [row.call_id as string, row]));
     const sessionById = new Map((sessions ?? []).map((session) => [session.id as string, session]));
     const calls = callIds.flatMap((callId) => {
       const session = sessionById.get(callId);
