@@ -1,4 +1,4 @@
-import 'dart:ui' as ui;
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -107,9 +107,11 @@ class _HiCallBackgroundPainter extends CustomPainter {
       canvas.drawPath(path, stem);
       final center = Offset(x + (i.isEven ? 5 : -12), size.height * (.13 + (i % 3) * .08));
       for (var p = 0; p < 6; p++) {
-        final angle = p * 3.14159 / 3;
-        final petal = Offset(center.dx + 13 * ui.lerpDouble(0, 1, 1) * (p.isEven ? 1 : -1) * (p < 3 ? 1 : .55),
-            center.dy + (p - 2.5) * 7);
+        final angle = p * math.pi / 3;
+        final petal = Offset(
+          center.dx + math.cos(angle) * 15,
+          center.dy + math.sin(angle) * 15,
+        );
         canvas.drawCircle(petal, 13, Paint()..color = const Color(0x99FF5D91));
       }
       canvas.drawCircle(center, 7, Paint()..color = const Color(0xCCFFD76E));
