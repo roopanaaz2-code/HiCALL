@@ -84,9 +84,9 @@ Deno.serve(async (req: Request) => {
         body: { call_id: call.id },
       });
       if (pushError) console.error("Incoming-call push dispatch failed", pushError.message);
-      const { data: profile } = await admin.from("profiles").select("display_name, username").eq("id", user.id).maybeSingle();
-      const token = await issueToken(call.room_name, user.id, profile?.display_name || profile?.username || "HiCALL user");
-      return json({ call_id: call.id, room_name: call.room_name, server_url: livekitUrl, token, call_type: callType });
+      // Do not join the LiveKit room until the recipient explicitly accepts.
+      // The caller receives an empty token and waits for status=active before joining.
+      return json({ call_id: call.id, room_name: call.room_name, server_url: livekitUrl, token: "", call_type: callType });
     }
 
     if (action === "join") {
