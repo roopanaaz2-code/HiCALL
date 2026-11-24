@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
+import 'services/remote_config_service.dart';
 
 class HiCallApp extends StatelessWidget {
   const HiCallApp({super.key});
@@ -82,6 +83,80 @@ class HiCallApp extends StatelessWidget {
         theme: _theme(Brightness.light),
         darkTheme: _theme(Brightness.dark),
         themeMode: ThemeMode.system,
+        builder: (context, child) => ValueListenableBuilder<Map<String, dynamic>>(
+          valueListenable: RemoteConfigService.instance.values,
+          builder: (context, config, _) {
+            final maintenance = config['maintenance_mode'] == true;
+            final announcementEnabled = config['announcement_enabled'] == true;
+            final announcement = config['announcement_text'];
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                if (child != null) child,
+                if (announcementEnabled &&
+                    announcement is String &&
+                    announcement.trim().isNotEmpty &&
+                    !maintenance)
+                  Positioned(
+                    top: MediaQuery.paddingOf(context).top + 8,
+                    left: 12,
+                    right: 12,
+                    child: Material(
+                      color: const Color(0xFF164A77),
+                      borderRadius: BorderRadius.circular(12),
+                      elevation: 8,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Text(
+                          announcement,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                if (maintenance)
+                  const Positioned.fill(
+                    child: Material(
+                      color: Color(0xF2091020),
+                      child: SafeArea(
+                        child: Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(28),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.construction, color: Colors.white, size: 52),
+                                SizedBox(height: 18),
+                                Text(
+                                  'HiCALL is temporarily unavailable',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                SizedBox(height: 10),
+                                Text(
+                                  'Please try again shortly.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: Colors.white70),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
         home: StreamBuilder<AuthState>(
           stream: Supabase.instance.client.auth.onAuthStateChange,
           builder: (context, snapshot) => Supabase.instance.client.auth.currentSession == null
