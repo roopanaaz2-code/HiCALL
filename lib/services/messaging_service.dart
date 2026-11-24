@@ -28,6 +28,15 @@ class MessagingService {
         .toSet()
         .toList();
     final conversationIds = conversations.map((row) => row['id'] as String).toList();
+    final clearRows = await _client
+        .from('conversation_clears')
+        .select('conversation_id, cleared_at')
+        .eq('user_id', id)
+        .inFilter('conversation_id', conversationIds);
+    final clearByConversation = {
+      for (final row in clearRows)
+        row['conversation_id'] as String: DateTime.parse(row['cleared_at'] as String),
+    };
 
     final profiles = await _client
         .from('profiles')
@@ -50,11 +59,17 @@ class MessagingService {
     return conversations.map((row) {
       final conversationId = row['id'] as String;
       final otherId = row['user_a'] == id ? row['user_b'] as String : row['user_a'] as String;
+      final latest = latestByConversation[conversationId];
+      final latestAt = DateTime.tryParse(latest?['created_at'] as String? ?? '');
+      final clearedAt = clearByConversation[conversationId];
+      final visibleLatest = clearedAt != null && latestAt != null && !latestAt.isAfter(clearedAt)
+          ? null
+          : latest;
       return {
         ...row,
         'other_user_id': otherId,
         'other_profile': profileById[otherId],
-        'latest_message': latestByConversation[conversationId],
+        'latest_message': visibleLatest,
       };
     }).where((row) => row['other_profile'] != null).toList();
   }
@@ -93,11 +108,32 @@ class MessagingService {
     }
   }
 
-  Future<List<Map<String, dynamic>>> listMessages(String conversationId) async {
-    final rows = await _client
+  Future<DateTime?> clearTime(String conversationId) async {
+    final row = await _client
+        .from('conversation_clears')
+        .select('cleared_at')
+        .eq('user_id', _userId)
+        .eq('conversation_id', conversationId)
+        .maybeSingle();
+    return DateTime.tryParse(row?['cleared_at'] as String? ?? '');
+  }
+
+  Future<DateTime> clearConversation(String conversationId) async {
+    final result = await _client.rpc(
+      'clear_hicall_conversation',
+      params: {'p_conversation_id': conversationId},
+    );
+    if (result is! String) { throw Exception('Unable to confirm chat clear time.'); }
+    return DateTime.parse(result);
+  }
+
+  Future<List<Map<String, dynamic>>> listMessages(String conversationId, {DateTime? after}) async {
+    var query = _client
         .from('messages')
         .select('id, conversation_id, sender_id, body, created_at')
-        .eq('conversation_id', conversationId)
+        .eq('conversation_id', conversationId);
+    if (after != null) { query = query.gt('created_at', after.toUtc().toIso8601String()); }
+    final rows = await query
         .order('created_at', ascending: true)
         .limit(500);
     return List<Map<String, dynamic>>.from(rows);
