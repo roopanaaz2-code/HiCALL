@@ -130,6 +130,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   glowColor: const Color(0xFF39D8E8),
                   onCompleted: () => Navigator.pop(dialogContext, true),
                 ),
+                const SizedBox(height: 10),
+                WaterRippleButton(
+                  label: 'Accept call',
+                  icon: Icons.call_rounded,
+                  color: const Color(0xFF16A66A),
+                  onPressed: () => Navigator.pop(dialogContext, true),
+                ),
               ],
             ),
           ),
