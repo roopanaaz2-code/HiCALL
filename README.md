@@ -107,7 +107,7 @@ Shorebird patches can update Dart code for an app installed from a Shorebird-ena
    - `ANDROID_KEYSTORE_PASSWORD`
    - `ANDROID_KEY_ALIAS`
    - `ANDROID_KEY_PASSWORD`
-5. After the Shorebird app ID and secrets are ready and this change is merged to `main`, manually run **HiCALL Shorebird Initial Release**. It runs only from `main` and uploads a Shorebird-enabled APK artifact. Test/install that APK; it replaces the old non-Shorebird build.
+5. The initial release workflow currently pins Flutter 3.50.1; keep that baseline for patches to this release. After the Shorebird app ID and secrets are ready and this change is merged to `main`, manually run **HiCALL Shorebird Initial Release**. It runs only from `main` and uploads a Shorebird-enabled APK artifact. Test/install that APK; it replaces the old non-Shorebird build.
 
 ### Publishing a Dart patch
 
