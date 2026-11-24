@@ -61,6 +61,29 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
     return status.isEmpty ? 'Call' : status;
   }
 
+  Future<void> _clearHistory() async {
+    if (_calls.isEmpty) { return; }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Clear call history?'),
+        content: const Text('This clears call history from your account only. It does not delete the other participant’s history.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Clear history')),
+        ],
+      ),
+    );
+    if (confirmed != true) { return; }
+    try {
+      await CallHistoryService.instance.clear();
+      if (mounted) { setState(() => _calls = []); }
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your call history was cleared.'))); }
+    } catch (e) {
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')))); }
+    }
+  }
+
   Future<void> _redial(Map<String, dynamic> call, String type) async {
     final profile = Map<String, dynamic>.from(call['other_profile'] as Map);
     try {
@@ -82,10 +105,18 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
               children: [
-                Text('Recent calls', style: TextStyle(color: colors.onSurfaceVariant)),
-                if (_error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(_error!, style: TextStyle(color: colors.error))),
-                if (_calls.isEmpty && !_loading)
-                  Padding(
+                Row(
+                  children: [
+                    Expanded(child: Text('Recent calls', style: TextStyle(color: colors.onSurfaceVariant))),
+                    IconButton(
+                      tooltip: 'Clear call history',
+                      onPressed: _calls.isEmpty ? null : _clearHistory,
+                      icon: const Icon(Icons.delete_sweep_outlined),
+                    ),
+                  ],
+                ),
+                _error != null ? Padding(padding: const EdgeInsets.only(top: 12), child: Text(_error!, style: TextStyle(color: colors.error))) : const SizedBox.shrink(),
+                _calls.isEmpty && !_loading ? Padding(
                     padding: const EdgeInsets.symmetric(vertical: 42, horizontal: 18),
                     child: Column(children: [
                       Icon(Icons.call_outlined, size: 38, color: colors.primary),
@@ -96,7 +127,7 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
                       const SizedBox(height: 16),
                       FilledButton.icon(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ContactsScreen())), icon: const Icon(Icons.people_outline), label: const Text('Find contacts')),
                     ]),
-                  ),
+                  ) : const SizedBox.shrink(),
                 ..._calls.map((call) {
                   final profile = Map<String, dynamic>.from(call['other_profile'] as Map);
                   final isVideo = call['call_type'] == 'video';
