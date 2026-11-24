@@ -93,9 +93,33 @@ class MessagingService {
     }
   }
 
-  Future<List<Map<String, dynamic>>> listMessages(String conversationId) async {
-    final rows = await _client
+  Future<DateTime?> clearTime(String conversationId) async {
+    final row = await _client
+        .from('conversation_clears')
+        .select('cleared_at')
+        .eq('user_id', _userId)
+        .eq('conversation_id', conversationId)
+        .maybeSingle();
+    return DateTime.tryParse(row?['cleared_at'] as String? ?? '');
+  }
+
+  Future<DateTime> clearConversation(String conversationId) async {
+    final now = DateTime.now().toUtc();
+    final row = await _client.from('conversation_clears').upsert({
+      'user_id': _userId,
+      'conversation_id': conversationId,
+      'cleared_at': now.toIso8601String(),
+    }, onConflict: 'user_id,conversation_id').select('cleared_at').single();
+    return DateTime.parse(row['cleared_at'] as String);
+  }
+
+  Future<List<Map<String, dynamic>>> listMessages(String conversationId, {DateTime? after}) async {
+    var query = _client
         .from('messages')
+        .select('id, conversation_id, sender_id, body, created_at')
+        .eq('conversation_id', conversationId);
+    if (after != null) query = query.gt('created_at', after.toUtc().toIso8601String());
+    final rows = await query
         .select('id, conversation_id, sender_id, body, created_at')
         .eq('conversation_id', conversationId)
         .order('created_at', ascending: true)
