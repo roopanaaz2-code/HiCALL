@@ -193,9 +193,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile updated.')));
       }
     } on PostgrestException catch (e) {
-      if (mounted) setState(() => _error = e.code == '23505'
-          ? 'That username is already taken. Choose another one.'
-          : 'Could not save your profile. Please try again.');
+      if (mounted) {
+        setState(() => _error = e.code == '23505'
+            ? 'That username is already taken. Choose another one.'
+            : 'Could not save your profile. Please try again.');
+      }
     } catch (e) {
       if (mounted) { setState(() => _error = e.toString().replaceFirst('FormatException: ', '')); }
     } finally {
