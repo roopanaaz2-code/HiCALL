@@ -119,8 +119,6 @@ class MessagingService {
         .eq('conversation_id', conversationId);
     if (after != null) query = query.gt('created_at', after.toUtc().toIso8601String());
     final rows = await query
-        .select('id, conversation_id, sender_id, body, created_at')
-        .eq('conversation_id', conversationId)
         .order('created_at', ascending: true)
         .limit(500);
     return List<Map<String, dynamic>>.from(rows);
