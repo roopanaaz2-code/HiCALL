@@ -133,7 +133,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _chooseRingtone() async {
     try {
       final path = await CallPreferencesService.chooseRingtone();
-      if (path == null || !mounted) return;
+      if (path == null || !mounted) { return; }
       setState(() => _ringtonePath = path);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Incoming ringtone saved.')),
@@ -161,7 +161,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _resetRingtone() async {
     await CallPreferencesService.clearRingtone();
-    if (mounted) setState(() => _ringtonePath = null);
+    if (mounted) { setState(() => _ringtonePath = null); }
   }
 
   Future<void> _editPrivatePhone() async {
@@ -211,9 +211,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile updated.')));
       }
     } on PostgrestException catch (e) {
-      if (mounted) setState(() => _error = e.code == '23505'
-          ? 'That username is already taken. Choose another one.'
-          : 'Could not save your profile. Please try again.');
+      if (mounted) {
+        setState(() => _error = e.code == '23505'
+            ? 'That username is already taken. Choose another one.'
+            : 'Could not save your profile. Please try again.');
+      }
     } catch (e) {
       if (mounted) { setState(() => _error = e.toString().replaceFirst('FormatException: ', '')); }
     } finally {
@@ -361,7 +363,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         selected: _selectedBackground == 'blue',
                         onSelected: (_) async {
                           await AppBackground.setTheme('blue');
-                          if (mounted) setState(() => _selectedBackground = 'blue');
+                          if (mounted) { setState(() => _selectedBackground = 'blue'); }
                         },
                       ),
                       ChoiceChip(
@@ -369,7 +371,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         selected: _selectedBackground == 'flowers',
                         onSelected: (_) async {
                           await AppBackground.setTheme('flowers');
-                          if (mounted) setState(() => _selectedBackground = 'flowers');
+                          if (mounted) { setState(() => _selectedBackground = 'flowers'); }
                         },
                       ),
                       ChoiceChip(
@@ -377,7 +379,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         selected: _selectedBackground == 'snow',
                         onSelected: (_) async {
                           await AppBackground.setTheme('snow');
-                          if (mounted) setState(() => _selectedBackground = 'snow');
+                          if (mounted) { setState(() => _selectedBackground = 'snow'); }
                         },
                       ),
                     ],
