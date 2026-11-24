@@ -108,7 +108,7 @@ class HiCallApp extends StatelessWidget {
                 const Positioned.fill(
                   child: ColoredBox(color: Color(0x66051020)),
                 ),
-                ?child,
+                child ?? const SizedBox.shrink(),
                 if (announcementEnabled &&
                     announcement is String &&
                     announcement.trim().isNotEmpty &&
