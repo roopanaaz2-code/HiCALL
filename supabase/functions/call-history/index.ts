@@ -37,6 +37,15 @@ Deno.serve(async (req: Request) => {
     const admin = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
+    const body = await req.json().catch(() => ({}));
+    if (body?.action === "clear") {
+      const { error: clearError } = await admin
+        .from("call_participants")
+        .delete()
+        .eq("user_id", user.id);
+      if (clearError) return json({ error: "Unable to clear your call history." }, 503);
+      return json({ ok: true });
+    }
     const { data: participation, error: participationError } = await admin
       .from("call_participants")
       .select("call_id, invited_at, joined_at, left_at")
