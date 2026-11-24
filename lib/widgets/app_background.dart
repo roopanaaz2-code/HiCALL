@@ -98,6 +98,7 @@ class _HiCallBackgroundPainter extends CustomPainter {
 
   void _drawFlowers(Canvas canvas, Size size) {
     _glow(canvas, Offset(size.width * .5, size.height * .45), size.width * .5, const Color(0xFFFF3E75), .5);
+    _glow(canvas, Offset(size.width * .12, size.height * .78), size.width * .42, const Color(0xFFFF1744), .5);
     final stem = Paint()..color = const Color(0x8874A66A)..style = PaintingStyle.stroke..strokeWidth = 2.2;
     for (var i = 0; i < 5; i++) {
       final x = size.width * (i / 4);
@@ -112,7 +113,7 @@ class _HiCallBackgroundPainter extends CustomPainter {
           center.dx + math.cos(angle) * 15,
           center.dy + math.sin(angle) * 15,
         );
-        canvas.drawCircle(petal, 13, Paint()..color = const Color(0x99FF5D91));
+        canvas.drawCircle(petal, 13, Paint()..color = p.isEven ? const Color(0xAAFF365D) : const Color(0x99FF5D91));
       }
       canvas.drawCircle(center, 7, Paint()..color = const Color(0xCCFFD76E));
     }
