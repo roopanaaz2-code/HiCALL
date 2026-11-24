@@ -79,7 +79,7 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
   void _onMessage(Map<String, dynamic> message) {
     if (!mounted) { return; }
     final createdAt = DateTime.tryParse(message['created_at'] as String? ?? '');
-    if (_clearedAt != null && createdAt != null && !createdAt.isAfter(_clearedAt!)) return;
+    if (_clearedAt != null && createdAt != null && !createdAt.isAfter(_clearedAt!)) { return; }
     final id = message['id'] as String?;
     if (id == null || !_messageIds.add(id)) { return; }
     setState(() {
@@ -125,10 +125,10 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
         ],
       ),
     );
-    if (confirmed != true) return;
+    if (confirmed != true) { return; }
     try {
       final clearedAt = await MessagingService.instance.clearConversation(widget.conversationId);
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() {
         _clearedAt = clearedAt;
         _messages.clear();
