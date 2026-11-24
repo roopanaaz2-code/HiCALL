@@ -97,6 +97,12 @@ jobs:
       - name: Prepare Firebase, manifest, Gradle mirror, and signing
         run: python3 scripts/prepare_shorebird_android.py
 
+      - name: Render launcher icon source
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y librsvg2-bin
+          rsvg-convert --width 1024 --height 1024 assets/hicall_icon.svg > assets/hicall_icon.png
+
       - name: Resolve packages
         run: flutter pub get
 
