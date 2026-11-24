@@ -17,7 +17,6 @@ class HiCallApp extends StatelessWidget {
       secondary: _brandCyan,
       brightness: brightness,
     );
-    final page = isDark ? const Color(0xFF091326) : const Color(0xFFF3F7FC);
     final surface = isDark ? const Color(0xFF111E35) : Colors.white;
 
     return ThemeData(
