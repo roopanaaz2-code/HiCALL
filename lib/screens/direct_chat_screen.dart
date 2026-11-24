@@ -25,6 +25,7 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
   bool _loading = true;
   bool _sending = false;
   String? _error;
+  DateTime? _clearedAt;
 
   String get _userId => Supabase.instance.client.auth.currentUser!.id;
 
@@ -55,7 +56,8 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
       _error = null;
     });
     try {
-      final rows = await MessagingService.instance.listMessages(widget.conversationId);
+      final clearedAt = await MessagingService.instance.clearTime(widget.conversationId);
+      final rows = await MessagingService.instance.listMessages(widget.conversationId, after: clearedAt);
       if (!mounted) { return; }
       setState(() {
         for (final row in rows) {
@@ -63,6 +65,7 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
           if (_messageIds.add(id)) { _messages.add(row); }
         }
         _messages.sort((a, b) => _timestamp(a).compareTo(_timestamp(b)));
+        _clearedAt = clearedAt;
         _loading = false;
       });
       _scrollToLatest();
@@ -75,6 +78,8 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
 
   void _onMessage(Map<String, dynamic> message) {
     if (!mounted) { return; }
+    final createdAt = DateTime.tryParse(message['created_at'] as String? ?? '');
+    if (_clearedAt != null && createdAt != null && !createdAt.isAfter(_clearedAt!)) { return; }
     final id = message['id'] as String?;
     if (id == null || !_messageIds.add(id)) { return; }
     setState(() {
@@ -105,6 +110,33 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
       if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Message not sent: ${e.toString().replaceFirst('Exception: ', '')}'))); }
     } finally {
       if (mounted) { setState(() => _sending = false); }
+    }
+  }
+
+  Future<void> _clearChat() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Clear this chat?'),
+        content: const Text('This hides the existing messages from your account only. The other person keeps their chat history.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Clear for me')),
+        ],
+      ),
+    );
+    if (confirmed != true) { return; }
+    try {
+      final clearedAt = await MessagingService.instance.clearConversation(widget.conversationId);
+      if (!mounted) { return; }
+      setState(() {
+        _clearedAt = clearedAt;
+        _messages.clear();
+        _messageIds.clear();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Chat cleared for your account.')));
+    } catch (e) {
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not clear chat: ${e.toString().replaceFirst('Exception: ', '')}'))); }
     }
   }
 
@@ -150,6 +182,11 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
           ],
         ),
         actions: [
+          PopupMenuButton<String>(
+            tooltip: 'Chat options',
+            onSelected: (value) { if (value == 'clear') _clearChat(); },
+            itemBuilder: (_) => const [PopupMenuItem(value: 'clear', child: Text('Clear chat for me'))],
+          ),
           IconButton(tooltip: 'Audio call', onPressed: () => _startCall('audio'), icon: const Icon(Icons.call_rounded)),
           IconButton(tooltip: 'Video call', onPressed: () => _startCall('video'), icon: const Icon(Icons.videocam_rounded)),
         ],

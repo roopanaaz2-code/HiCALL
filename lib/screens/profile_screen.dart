@@ -2,10 +2,12 @@ import 'dart:async';
 import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/phone_service.dart';
 import '../services/profile_service.dart';
 import '../services/call_preferences_service.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/app_background.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -22,6 +24,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Map<String, dynamic>? _privatePhone;
   String? _avatarPath;
   String? _ringtonePath;
+  String _selectedBackground = AppBackground.theme.value;
   bool _loading = true;
   bool _saving = false;
   bool _avatarBusy = false;
@@ -112,10 +115,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _contactUs() async {
+    final uri = Uri(
+      scheme: 'mailto',
+      path: 'roopanaaz2@gmail.com',
+      queryParameters: {
+        'subject': 'HiCALL feedback',
+        'body': 'Hello HiCALL team,\\n\\nI would like to share this feedback or idea:\\n\\n',
+      },
+    );
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No email app is available on this device.')));
+    }
+  }
+
   Future<void> _chooseRingtone() async {
     try {
       final path = await CallPreferencesService.chooseRingtone();
-      if (path == null || !mounted) return;
+      if (path == null || !mounted) { return; }
       setState(() => _ringtonePath = path);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Incoming ringtone saved.')),
@@ -143,7 +161,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _resetRingtone() async {
     await CallPreferencesService.clearRingtone();
-    if (mounted) setState(() => _ringtonePath = null);
+    if (mounted) { setState(() => _ringtonePath = null); }
   }
 
   Future<void> _editPrivatePhone() async {
@@ -321,6 +339,67 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.check_rounded),
             label: const Text('Save profile'),
+          ),
+          const SizedBox(height: 26),
+          _sectionTitle(context, 'Settings & feedback'),
+          const SizedBox(height: 10),
+          _sectionTitle(context, 'App background'),
+          const SizedBox(height: 10),
+          Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Choose your HiCALL wallpaper', style: TextStyle(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ChoiceChip(
+                        label: const Text('Blue & gold glow'),
+                        selected: _selectedBackground == 'blue',
+                        onSelected: (_) async {
+                          await AppBackground.setTheme('blue');
+                          if (mounted) { setState(() => _selectedBackground = 'blue'); }
+                        },
+                      ),
+                      ChoiceChip(
+                        label: const Text('Pink flowers'),
+                        selected: _selectedBackground == 'flowers',
+                        onSelected: (_) async {
+                          await AppBackground.setTheme('flowers');
+                          if (mounted) { setState(() => _selectedBackground = 'flowers'); }
+                        },
+                      ),
+                      ChoiceChip(
+                        label: const Text('Snow tactical'),
+                        selected: _selectedBackground == 'snow',
+                        onSelected: (_) async {
+                          await AppBackground.setTheme('snow');
+                          if (mounted) { setState(() => _selectedBackground = 'snow'); }
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text('Your choice is saved on this device. The flower theme uses a soft 50% overlay; the snow theme has a winter tactical illustration.', style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12, height: 1.35)),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            margin: EdgeInsets.zero,
+            child: ListTile(
+              leading: Icon(Icons.mail_outline_rounded, color: colors.primary),
+              title: const Text('Contact us'),
+              subtitle: const Text('Send feedback, suggestions, or ideas to the HiCALL team.'),
+              trailing: const Icon(Icons.open_in_new_rounded),
+              onTap: _contactUs,
+            ),
           ),
           const SizedBox(height: 26),
           _sectionTitle(context, 'Calling experience'),

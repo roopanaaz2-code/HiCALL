@@ -7,9 +7,11 @@ import 'app.dart';
 import 'config/app_config.dart';
 import 'services/firebase_push_service.dart';
 import 'services/remote_config_service.dart';
+import 'widgets/app_background.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppBackground.load();
   await Firebase.initializeApp();
   await Supabase.initialize(
     url: AppConfig.supabaseUrl,

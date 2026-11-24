@@ -101,3 +101,53 @@ class _SlideActionState extends State<SlideAction> {
     );
   }
 }
+
+
+/// Compact tap action with a water-like ripple for prominent call controls.
+class WaterRippleButton extends StatelessWidget {
+  const WaterRippleButton({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: color,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(16),
+        splashColor: Colors.white24,
+        highlightColor: Colors.white10,
+        child: SizedBox(
+          width: double.infinity,
+          height: 54,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.white),
+              const SizedBox(width: 10),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
