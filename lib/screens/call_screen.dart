@@ -300,7 +300,7 @@ class _CallScreenState extends State<CallScreen> {
   String get _statusLabel {
     if (ending) return 'Ending call…';
     if (reconnecting) return 'Reconnecting…';
-    if (connecting) return widget.credentials.token.isEmpty ? 'Waiting for answer…' : 'Connecting…';
+    if (connecting) return _credentials.token.isEmpty ? 'Waiting for answer…' : 'Connecting…';
     if (connected) return 'Connected';
     return error == null ? 'Call ended' : 'Unable to connect';
   }
