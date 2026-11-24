@@ -25,7 +25,7 @@ class CallService {
   }
 
   Future<CallCredentials> startCall({required String recipientId, required String callType}) =>
-    _invoke({'action': 'start', 'recipient_id': recipientId, 'call_type': callType});
+    _invoke({'action': 'start', 'recipient_id': recipientId, 'call_type': callType, 'defer_join': true});
 
   Future<void> waitForAcceptance(String callId, {Duration timeout = const Duration(seconds: 50)}) async {
     final deadline = DateTime.now().add(timeout);
