@@ -17,7 +17,7 @@ class AppBackground {
   }
 
   static Future<void> setTheme(String value) async {
-    if (!const ['blue', 'flowers', 'snow'].contains(value)) return;
+    if (!const ['blue', 'flowers', 'snow'].contains(value)) { return; }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_key, value);
     theme.value = value;
