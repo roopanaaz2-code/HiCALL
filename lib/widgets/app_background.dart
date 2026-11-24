@@ -97,7 +97,7 @@ class _HiCallBackgroundPainter extends CustomPainter {
   }
 
   void _drawFlowers(Canvas canvas, Size size) {
-    _glow(canvas, Offset(size.width * .5, size.height * .45), size.width * .5, const Color(0xFFFF3E75), .22);
+    _glow(canvas, Offset(size.width * .5, size.height * .45), size.width * .5, const Color(0xFFFF3E75), .5);
     final stem = Paint()..color = const Color(0x8874A66A)..style = PaintingStyle.stroke..strokeWidth = 2.2;
     for (var i = 0; i < 5; i++) {
       final x = size.width * (i / 4);
@@ -157,14 +157,14 @@ class _HiCallBackgroundPainter extends CustomPainter {
         ..close();
       canvas.drawPath(path, tree);
     }
-    // Stylized winter tactical operator and icy-blue rifle silhouette.
-    final operator = Paint()..color = const Color(0xFF101C27);
-    canvas.drawCircle(Offset(size.width * .52, size.height * .60), size.width * .055, operator);
+    // Stylized winter tactical soldierPaint and icy-blue rifle silhouette.
+    final soldierPaint = Paint()..color = const Color(0xFF101C27);
+    canvas.drawCircle(Offset(size.width * .52, size.height * .60), size.width * .055, soldierPaint);
     canvas.drawRRect(RRect.fromRectAndRadius(
       Rect.fromLTWH(size.width * .45, size.height * .64, size.width * .14, size.height * .22),
-      const Radius.circular(18)), operator);
-    canvas.drawLine(Offset(size.width * .47, size.height * .68), Offset(size.width * .37, size.height * .79), operator..strokeWidth = 15);
-    canvas.drawLine(Offset(size.width * .56, size.height * .68), Offset(size.width * .67, size.height * .76), operator..strokeWidth = 15);
+      const Radius.circular(18)), soldierPaint);
+    canvas.drawLine(Offset(size.width * .47, size.height * .68), Offset(size.width * .37, size.height * .79), soldierPaint..strokeWidth = 15);
+    canvas.drawLine(Offset(size.width * .56, size.height * .68), Offset(size.width * .67, size.height * .76), soldierPaint..strokeWidth = 15);
     final rifle = Paint()..color = const Color(0xFF7FDFFF)..strokeWidth = 7..strokeCap = StrokeCap.round;
     canvas.drawLine(Offset(size.width * .38, size.height * .70), Offset(size.width * .70, size.height * .65), rifle);
     canvas.drawLine(Offset(size.width * .55, size.height * .67), Offset(size.width * .58, size.height * .75), rifle..strokeWidth = 5);
