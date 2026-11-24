@@ -98,8 +98,8 @@ Shorebird patches can update Dart code for an app installed from a Shorebird-ena
 
 ### One-time setup
 
-1. Install the Shorebird CLI on a computer with the Android SDK and run `shorebird login`.
-2. From the repository root, run `shorebird init --display-name "HiCALL"`. Commit the generated `shorebird.yaml` and the new `shorebird.yaml` asset entry in `pubspec.yaml`. Do not invent or copy another app's app ID.
+1. Create a Shorebird API key in the Shorebird Console and add it to GitHub repository Actions secrets as `SHOREBIRD_TOKEN`.
+2. From GitHub Actions, run **HiCALL Shorebird Initialization** on `main`. If your Shorebird account has multiple organizations, supply the correct organization ID. The workflow creates the app ID and opens a PR with the generated `shorebird.yaml` and `pubspec.yaml` asset entry. Review and merge that PR; do not invent or copy another app's app ID.
 3. Create one Android upload keystore and keep a secure offline backup. The same keystore must be used for this initial APK and all later full APK upgrades. Do not commit it.
 4. Add these GitHub repository Actions secrets under Settings → Secrets and variables → Actions:
    - `SHOREBIRD_TOKEN` — Shorebird API key
