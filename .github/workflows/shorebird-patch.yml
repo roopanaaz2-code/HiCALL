@@ -3,12 +3,21 @@ name: HiCALL Shorebird Patch
 on:
   workflow_dispatch:
     inputs:
+      operation:
+        description: Validate only first. Publishing is a separate explicit operation.
+        required: true
+        type: choice
+        options:
+          - validate
+          - publish
+        default: validate
       release_version:
-        description: Exact installed Shorebird release version (for example 1.0.0+1)
+        description: Installed Shorebird release version
         required: true
         type: string
+        default: 1.0.0+1
       track:
-        description: Start with staging; promote to stable only after testing
+        description: Shorebird patch track (used only when operation is publish)
         required: true
         type: choice
         options:
@@ -20,12 +29,55 @@ permissions:
   contents: read
 
 concurrency:
-  group: hicall-shorebird-patch-${{ inputs.release_version }}-${{ inputs.track }}
+  group: hicall-shorebird-${{ github.ref }}-${{ inputs.release_version }}-${{ inputs.operation }}-${{ inputs.track }}
   cancel-in-progress: false
 
 jobs:
-  shorebird-patch:
-    if: github.ref == 'refs/heads/main'
+  validate:
+    if: inputs.operation == 'validate'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout selected branch
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter matching installed release
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.50.1'
+          cache: true
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Generate Android platform files
+        run: flutter create --platforms=android --org com.hicall --project-name hicall .
+
+      - name: Resolve packages
+        run: flutter pub get
+
+      - name: Analyze Dart source
+        run: flutter analyze
+
+      - name: Run available Flutter tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -d test ] && find test -type f -name '*_test.dart' -print -quit | grep -q .; then
+            flutter test
+          else
+            echo "No Flutter test files found; test step skipped."
+          fi
+
+      - name: Build Android debug APK (compile check only)
+        run: flutter build apk --debug
+
+  publish:
+    if: inputs.operation == 'publish' && github.ref == 'refs/heads/feature/installed-release-clear-chat-background-contact'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
@@ -33,10 +85,10 @@ jobs:
       RELEASE_VERSION: ${{ inputs.release_version }}
       PATCH_TRACK: ${{ inputs.track }}
     steps:
-      - name: Checkout
+      - name: Checkout installed-release feature branch
         uses: actions/checkout@v4
 
-      - name: Verify Shorebird app and signing secrets
+      - name: Verify Shorebird app, release version, and signing secrets
         shell: bash
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -45,16 +97,19 @@ jobs:
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          test -n "$SHOREBIRD_TOKEN" || { echo "::error::Add repository secret SHOREBIRD_TOKEN."; exit 1; }
-          test -s shorebird.yaml || { echo "::error::shorebird.yaml is missing. Run shorebird init and commit it."; exit 1; }
-          test -n "$KEYSTORE_BASE64" && test -n "$KEYSTORE_PASSWORD" && test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD" || {
-            echo "::error::The persistent Android signing secrets are required for Shorebird patches."; exit 1;
+          test -n "$SHOREBIRD_TOKEN" || { echo "::error::SHOREBIRD_TOKEN is missing."; exit 1; }
+          test -s shorebird.yaml || { echo "::error::shorebird.yaml is missing."; exit 1; }
+          grep -Fq '6c6a7838-5335-4ffd-9a4e-3bf5cc7a6c08' shorebird.yaml || {
+            echo "::error::This is not the installed HiCALL Shorebird app."; exit 1;
           }
-          [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+\+[0-9]+$ ]] || {
-            echo "::error::Enter a version such as 1.0.0+1."; exit 1;
+          test "$RELEASE_VERSION" = "1.0.0+1" || {
+            echo "::error::Only the installed 1.0.0+1 release is allowed by this workflow."; exit 1;
+          }
+          test -n "$KEYSTORE_BASE64" && test -n "$KEYSTORE_PASSWORD" && test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD" || {
+            echo "::error::Persistent Android signing secrets are required."; exit 1;
           }
 
-      - name: Set up Flutter matching the Shorebird release baseline
+      - name: Set up Flutter matching the installed release
         uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -96,6 +151,12 @@ jobs:
 
       - name: Prepare Firebase, manifest, Gradle mirror, and signing
         run: python3 scripts/prepare_shorebird_android.py
+
+      - name: Render launcher icon source
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y librsvg2-bin
+          rsvg-convert --width 1024 --height 1024 assets/hicall_icon.svg > assets/hicall_icon.png
 
       - name: Resolve packages
         run: flutter pub get
