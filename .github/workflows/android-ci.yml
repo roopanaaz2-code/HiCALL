@@ -18,7 +18,7 @@ jobs:
   android-debug:
     name: Analyze, test, and build Android APKs
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,26 +38,42 @@ jobs:
       - name: Generate Android platform files
         run: flutter create --platforms=android --org com.hicall --project-name hicall .
 
-      - name: Configure Firebase Android SDK
+      - name: Configure Firebase Android SDK and Maven Central mirror
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p android/app
+          test -s firebase/google-services.json
           cp firebase/google-services.json android/app/google-services.json
           python3 - <<'PY'
           from pathlib import Path
+
+          mirror = 'maven { url = uri("https://maven-central-eu.storage-download.googleapis.com/maven2/") }'
           settings = Path("android/settings.gradle.kts")
           s = settings.read_text()
           marker = 'id("com.google.gms.google-services") version "4.4.4" apply false'
           if marker not in s:
               s = s.replace("plugins {", "plugins {\n    " + marker, 1)
+
+          # Plugin marker and transitive Kotlin/Gradle dependencies must be
+          # able to resolve without relying on rate-limited repo.maven.apache.org.
+          if "maven-central-eu.storage-download.googleapis.com" not in s:
+              s = s.replace("repositories {", "repositories {\n        " + mirror, 1)
           settings.write_text(s)
+
           app = Path("android/app/build.gradle.kts")
           a = app.read_text()
           plugin = 'id("com.google.gms.google-services")'
           if plugin not in a:
               a = a.replace("plugins {", "plugins {\n    " + plugin, 1)
           app.write_text(a)
+
+          root_gradle = Path("android/build.gradle.kts")
+          if root_gradle.exists():
+              g = root_gradle.read_text()
+              if "maven-central-eu.storage-download.googleapis.com" not in g:
+                  g = g.replace("repositories {", "repositories {\n        " + mirror, 1)
+              root_gradle.write_text(g)
           PY
 
       - name: Add Android calling and notification permissions and SDK floor
@@ -119,10 +135,30 @@ jobs:
         run: flutter test --no-pub
 
       - name: Build debug APK
-        run: flutter build apk --debug --no-pub
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if flutter build apk --debug --no-pub; then exit 0; fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Debug build attempt $attempt failed; retrying after mirror/network cooldown."
+              sleep $((attempt * 20))
+            fi
+          done
+          exit 1
 
       - name: Build release APK
-        run: flutter build apk --release --no-pub
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if flutter build apk --release --no-pub; then exit 0; fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Release build attempt $attempt failed; retrying after mirror/network cooldown."
+              sleep $((attempt * 20))
+            fi
+          done
+          exit 1
 
       - name: Upload release APK
         uses: actions/upload-artifact@v4

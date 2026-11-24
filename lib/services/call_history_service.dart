@@ -6,6 +6,13 @@ class CallHistoryService {
 
   final SupabaseClient _client = Supabase.instance.client;
 
+  Future<void> clear() async {
+    final response = await _client.functions.invoke('call-history', body: const {'action': 'clear'});
+    if (response.status < 200 || response.status >= 300) {
+      throw Exception('Unable to clear call history.');
+    }
+  }
+
   Future<List<Map<String, dynamic>>> load() async {
     final response = await _client.functions.invoke('call-history', body: const {});
     if (response.status < 200 || response.status >= 300) {

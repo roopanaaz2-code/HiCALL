@@ -20,6 +20,8 @@ dependencies:
   wakelock_plus: ^1.8.2
   firebase_core: ^4.15.2
   firebase_messaging: ^16.7.1
+  shared_preferences: ^2.5.3
+  url_launcher: ^6.3.2
 dev_dependencies:
   flutter_test:
     sdk: flutter

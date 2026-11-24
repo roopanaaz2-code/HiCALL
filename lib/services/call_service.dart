@@ -25,7 +25,23 @@ class CallService {
   }
 
   Future<CallCredentials> startCall({required String recipientId, required String callType}) =>
-    _invoke({'action': 'start', 'recipient_id': recipientId, 'call_type': callType});
+    _invoke({'action': 'start', 'recipient_id': recipientId, 'call_type': callType, 'defer_join': true});
+
+  Future<void> waitForAcceptance(String callId, {Duration timeout = const Duration(seconds: 50)}) async {
+    final deadline = DateTime.now().add(timeout);
+    while (DateTime.now().isBefore(deadline)) {
+      final row = await _client.from('call_sessions').select('status, expires_at').eq('id', callId).maybeSingle();
+      if (row == null) { throw Exception('This call is no longer available.'); }
+      final status = row['status'] as String? ?? '';
+      if (status == 'active') { return; }
+      if (status == 'declined') { throw Exception('The other person declined the call.'); }
+      if (['ended', 'cancelled', 'missed'].contains(status)) { throw Exception('This call has ended.'); }
+      final expiry = DateTime.tryParse(row['expires_at'] as String? ?? '');
+      if (expiry != null && !expiry.isAfter(DateTime.now().toUtc())) { throw Exception('No answer. The call expired.'); }
+      await Future.delayed(const Duration(milliseconds: 700));
+    }
+    throw Exception('No answer. Please try again.');
+  }
 
   Future<CallCredentials> joinCall(String callId) => _invoke({'action': 'join', 'call_id': callId});
 
@@ -52,7 +68,7 @@ class CallService {
           ),
           callback: (payload) {
             final status = payload.newRecord['status'] as String?;
-            if (status != null) onStatus(status);
+            if (status != null) { onStatus(status); }
           },
         )
         .subscribe();
