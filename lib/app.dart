@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'services/remote_config_service.dart';
+import 'widgets/app_background.dart';
 
 class HiCallApp extends StatelessWidget {
   const HiCallApp({super.key});
@@ -17,7 +18,7 @@ class HiCallApp extends StatelessWidget {
       secondary: _brandCyan,
       brightness: brightness,
     );
-    final page = isDark ? const Color(0xFF091326) : const Color(0xFFF3F7FC);
+    const page = Colors.transparent;
     final surface = isDark ? const Color(0xFF111E35) : Colors.white;
 
     return ThemeData(
@@ -82,16 +83,19 @@ class HiCallApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: _theme(Brightness.light),
         darkTheme: _theme(Brightness.dark),
-        themeMode: ThemeMode.system,
+        themeMode: ThemeMode.dark,
         builder: (context, child) => ValueListenableBuilder<Map<String, dynamic>>(
           valueListenable: RemoteConfigService.instance.values,
           builder: (context, config, _) {
             final maintenance = config['maintenance_mode'] == true;
             final announcementEnabled = config['announcement_enabled'] == true;
             final announcement = config['announcement_text'];
-            return Stack(
+            return ValueListenableBuilder<String>(
+              valueListenable: AppBackground.theme,
+              builder: (context, selectedTheme, _) => Stack(
               fit: StackFit.expand,
               children: [
+                HiCallBackground(theme: selectedTheme),
                 ?child,
                 if (announcementEnabled &&
                     announcement is String &&
@@ -154,6 +158,7 @@ class HiCallApp extends StatelessWidget {
                     ),
                   ),
               ],
+            ),
             );
           },
         ),
