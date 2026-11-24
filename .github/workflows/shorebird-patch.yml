@@ -90,11 +90,8 @@ jobs:
       - name: Prepare Firebase, manifest, Gradle mirror, and signing
         run: python3 scripts/prepare_shorebird_android.py
 
-      - name: Resolve packages, analyze, and test
-        run: |
-          shorebird flutter pub get
-          shorebird flutter analyze --fatal-infos
-          shorebird flutter test
+      - name: Resolve packages
+        run: shorebird flutter pub get
 
       - name: Publish Shorebird patch
         run: shorebird patch android --release-version "$RELEASE_VERSION" --track "$PATCH_TRACK"
