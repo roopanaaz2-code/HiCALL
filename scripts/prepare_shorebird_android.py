@@ -71,6 +71,7 @@ if debug_signing in app_text:
     app_text = app_text.replace(debug_signing, 'signingConfig = signingConfigs.getByName("release")')
 elif 'signingConfig = signingConfigs.getByName("release")' not in app_text:
     raise SystemExit("Unrecognized Flutter Gradle template: release signing line missing")
+app_text = app_text.replace("minSdk = flutter.minSdkVersion", "minSdk = 23")
 app.write_text(app_text)
 
 manifest = Path("android/app/src/main/AndroidManifest.xml")
