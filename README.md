@@ -90,7 +90,7 @@ set config_value = '"Scheduled maintenance is in progress."'::jsonb,
 where config_key = 'announcement_text';
 ```
 
-Current keys include `maintenance_mode`, `announcement_enabled`, `announcement_text`, `minimum_supported_version`, `feature_calls_enabled`, `feature_video_enabled`, and `feature_chat_enabled`. Values are exposed to the client and must be treated as public. Remote configuration changes values/flags only; it cannot add new Dart behavior by itself.
+Current keys include `maintenance_mode`, `announcement_enabled`, `announcement_text`, `minimum_supported_version`, `feature_calls_enabled`, `feature_video_enabled`, and `feature_chat_enabled`. The app shell currently applies the maintenance and announcement settings; the feature flags are exposed through `RemoteConfigService` for feature screens to consume, but are not yet wired to disable individual screens. The minimum-version value is informational and is not yet an enforced upgrade gate. Values are exposed to the client and must be treated as public. Remote configuration changes values/flags only; it cannot add new Dart behavior by itself.
 
 ## Shorebird Code Push (Android)
 
