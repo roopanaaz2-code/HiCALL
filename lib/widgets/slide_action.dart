@@ -154,7 +154,7 @@ class _WaterRippleButtonState extends State<WaterRippleButton>
       child: AnimatedBuilder(
         animation: _controller,
         builder: (context, child) => CustomPaint(
-          painter: _WaterRipplePainter(
+          foregroundPainter: _WaterRipplePainter(
             progress: _controller.value,
             color: widget.color,
           ),
@@ -199,6 +199,14 @@ class _WaterRipplePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (progress <= 0 || progress >= 1) return;
     final center = Offset(size.width / 2, size.height / 2);
+    // A falling water drop lands first; expanding rings follow the impact.
+    final dropY = size.height * (.10 + progress * .40);
+    final drop = Path()
+      ..moveTo(center.dx, dropY - 9)
+      ..cubicTo(center.dx + 10, dropY + 3, center.dx + 8, dropY + 12, center.dx, dropY + 14)
+      ..cubicTo(center.dx - 8, dropY + 12, center.dx - 10, dropY + 3, center.dx, dropY - 9)
+      ..close();
+    canvas.drawPath(drop, Paint()..color = color.withValues(alpha: (1 - progress) * .85));
     for (var i = 0; i < 2; i++) {
       final phase = (progress + i * 0.22) % 1;
       final paint = Paint()
