@@ -71,11 +71,11 @@ class _CallScreenState extends State<CallScreen> {
       ..on<TrackMutedEvent>((_) => _refreshRemoteVideo())
       ..on<TrackUnmutedEvent>((_) => _refreshRemoteVideo())
       ..on<RoomReconnectingEvent>((_) {
-        if (!mounted || ending) return;
+        if (!mounted || ending) { return; }
         setState(() => reconnecting = true);
       })
       ..on<RoomReconnectedEvent>((_) {
-        if (!mounted || ending) return;
+        if (!mounted || ending) { return; }
         setState(() {
           reconnecting = false;
           connected = true;
@@ -85,7 +85,7 @@ class _CallScreenState extends State<CallScreen> {
         _refreshRemoteVideo();
       })
       ..on<RoomDisconnectedEvent>((_) {
-        if (!mounted || ending) return;
+        if (!mounted || ending) { return; }
         setState(() {
           connected = false;
           reconnecting = false;
@@ -97,7 +97,7 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   void _onCallStatus(String status) {
-    if (!mounted || ending) return;
+    if (!mounted || ending) { return; }
     if (status == 'ended' ||
         status == 'declined' ||
         status == 'missed' ||
@@ -107,13 +107,13 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Future<void> _finishRemoteCall() async {
-    if (!mounted || ending) return;
+    if (!mounted || ending) { return; }
     setState(() => ending = true);
     _callTimer?.cancel();
     try {
       await room.disconnect();
     } catch (_) {}
-    if (mounted) Navigator.of(context).pop();
+    if (mounted) { Navigator.of(context).pop(); }
   }
 
   Future<void> connect() async {
@@ -121,7 +121,7 @@ class _CallScreenState extends State<CallScreen> {
       if (_credentials.token.isEmpty) {
         if (mounted) setState(() { connecting = true; connected = false; });
         await CallService.instance.waitForAcceptance(_credentials.callId);
-        if (!mounted || ending) return;
+        if (!mounted || ending) { return; }
         _credentials = await CallService.instance.joinCall(_credentials.callId);
       }
       final micPermission = await Permission.microphone.request();
@@ -143,7 +143,7 @@ class _CallScreenState extends State<CallScreen> {
           );
         }
       }
-      if (!mounted || ending) return;
+      if (!mounted || ending) { return; }
 
       await room.connect(_credentials.serverUrl, _credentials.token);
       if (!mounted || ending) {
@@ -163,7 +163,7 @@ class _CallScreenState extends State<CallScreen> {
       if (_isVideoCall) {
         await room.localParticipant?.setCameraEnabled(true);
       }
-      if (!mounted || ending) return;
+      if (!mounted || ending) { return; }
 
       setState(() {
         connected = true;
@@ -176,14 +176,14 @@ class _CallScreenState extends State<CallScreen> {
       _startCallTimer();
       _refreshRemoteVideo();
     } on _PermissionFailure catch (e) {
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() {
         error = e.message;
         connecting = false;
         connected = false;
       });
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() {
         error = 'Could not connect to the call. Check your internet connection and try again.';
         connecting = false;
@@ -194,10 +194,10 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   void _startCallTimer() {
-    if (_connectedAt != null) return;
+    if (_connectedAt != null) { return; }
     _connectedAt = DateTime.now();
     _callTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted || _connectedAt == null) return;
+      if (!mounted || _connectedAt == null) { return; }
       setState(() => elapsed = DateTime.now().difference(_connectedAt!));
     });
   }
@@ -212,19 +212,19 @@ class _CallScreenState extends State<CallScreen> {
           break;
         }
       }
-      if (firstTrack != null) break;
+      if (firstTrack != null) { break; }
     }
 
-    if (!mounted || identical(firstTrack, _remoteVideoTrack)) return;
+    if (!mounted || identical(firstTrack, _remoteVideoTrack)) { return; }
     setState(() => _remoteVideoTrack = firstTrack);
   }
 
   Future<void> toggleMic() async {
-    if (!connected || ending) return;
+    if (!connected || ending) { return; }
     final nextMuted = !muted;
     try {
       await room.localParticipant?.setMicrophoneEnabled(!nextMuted);
-      if (mounted) setState(() => muted = nextMuted);
+      if (mounted) { setState(() => muted = nextMuted); }
     } catch (_) {
       if (mounted) {
         setState(() => error = 'Unable to change microphone settings. Check microphone permission.');
@@ -233,7 +233,7 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Future<void> toggleCamera() async {
-    if (!connected || ending) return;
+    if (!connected || ending) { return; }
     final nextCameraOn = !cameraOn;
     try {
       if (nextCameraOn) {
@@ -248,10 +248,10 @@ class _CallScreenState extends State<CallScreen> {
           }
           return;
         }
-        if (!mounted || ending) return;
+        if (!mounted || ending) { return; }
       }
       await room.localParticipant?.setCameraEnabled(nextCameraOn);
-      if (mounted) setState(() => cameraOn = nextCameraOn);
+      if (mounted) { setState(() => cameraOn = nextCameraOn); }
     } catch (_) {
       if (mounted) {
         setState(() => error = 'Unable to change camera settings. Check camera permission.');
@@ -260,7 +260,7 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Future<void> hangUp() async {
-    if (ending) return;
+    if (ending) { return; }
     setState(() => ending = true);
     _callTimer?.cancel();
     try {
@@ -271,13 +271,13 @@ class _CallScreenState extends State<CallScreen> {
     try {
       await room.disconnect();
     } catch (_) {}
-    if (mounted) Navigator.of(context).pop();
+    if (mounted) { Navigator.of(context).pop(); }
   }
 
   Future<void> _disposeRoom() async {
     final listener = _roomListener;
     _roomListener = null;
-    if (listener != null) await listener.dispose();
+    if (listener != null) { await listener.dispose(); }
     try {
       await room.disconnect();
     } catch (_) {}
@@ -298,10 +298,10 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   String get _statusLabel {
-    if (ending) return 'Ending call…';
-    if (reconnecting) return 'Reconnecting…';
-    if (connecting) return _credentials.token.isEmpty ? 'Waiting for answer…' : 'Connecting…';
-    if (connected) return 'Connected';
+    if (ending) { return 'Ending call…'; }
+    if (reconnecting) { return 'Reconnecting…'; }
+    if (connecting) { return _credentials.token.isEmpty ? 'Waiting for answer…' : 'Connecting…'; }
+    if (connected) { return 'Connected'; }
     return error == null ? 'Call ended' : 'Unable to connect';
   }
 
