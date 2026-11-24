@@ -123,7 +123,7 @@ class MessagingService {
       'clear_hicall_conversation',
       params: {'p_conversation_id': conversationId},
     );
-    if (result is! String) throw Exception('Unable to confirm chat clear time.');
+    if (result is! String) { throw Exception('Unable to confirm chat clear time.'); }
     return DateTime.parse(result);
   }
 
@@ -132,7 +132,7 @@ class MessagingService {
         .from('messages')
         .select('id, conversation_id, sender_id, body, created_at')
         .eq('conversation_id', conversationId);
-    if (after != null) query = query.gt('created_at', after.toUtc().toIso8601String());
+    if (after != null) { query = query.gt('created_at', after.toUtc().toIso8601String()); }
     final rows = await query
         .order('created_at', ascending: true)
         .limit(500);
