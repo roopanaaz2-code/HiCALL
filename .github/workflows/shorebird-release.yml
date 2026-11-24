@@ -1,0 +1,97 @@
+name: HiCALL Shorebird Initial Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hicall-shorebird-release
+  cancel-in-progress: false
+
+jobs:
+  shorebird-release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify Shorebird app and signing secrets
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$SHOREBIRD_TOKEN" || { echo "::error::Add repository secret SHOREBIRD_TOKEN."; exit 1; }
+          test -s shorebird.yaml || { echo "::error::Run 'shorebird init --display-name HiCALL' locally and commit shorebird.yaml plus the pubspec.yaml asset entry."; exit 1; }
+          test -n "$KEYSTORE_BASE64" && test -n "$KEYSTORE_PASSWORD" && test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD" || {
+            echo "::error::Add ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, and ANDROID_KEY_PASSWORD repository secrets."; exit 1;
+          }
+
+      - name: Set up Shorebird
+        uses: shorebirdtech/setup-shorebird@v1
+        with:
+          cache: true
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Generate Android platform files with Shorebird Flutter
+        run: shorebird flutter create --platforms=android --org com.hicall --project-name hicall .
+
+      - name: Configure persistent Android signing key
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          mkdir -p android/app
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
+          cat > android/key.properties <<EOF
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=app/upload-keystore.jks
+          EOF
+          chmod 600 android/key.properties android/app/upload-keystore.jks
+
+      - name: Prepare Firebase, manifest, Gradle mirror, and signing
+        run: python3 scripts/prepare_shorebird_android.py
+
+      - name: Resolve packages and generate launcher icons
+        run: |
+          shorebird flutter pub get
+          sudo apt-get update
+          sudo apt-get install -y librsvg2-bin
+          rsvg-convert --width 1024 --height 1024 assets/hicall_icon.svg > assets/hicall_icon.png
+          shorebird flutter pub run flutter_launcher_icons
+
+      - name: Analyze and test
+        run: |
+          shorebird flutter analyze --fatal-infos
+          shorebird flutter test
+
+      - name: Create Shorebird-enabled Android release APK
+        run: shorebird release android --artifact apk
+
+      - name: Upload Shorebird release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: HiCALL-shorebird-initial-release
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
