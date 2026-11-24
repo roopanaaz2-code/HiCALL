@@ -28,6 +28,15 @@ class MessagingService {
         .toSet()
         .toList();
     final conversationIds = conversations.map((row) => row['id'] as String).toList();
+    final clearRows = await _client
+        .from('conversation_clears')
+        .select('conversation_id, cleared_at')
+        .eq('user_id', id)
+        .inFilter('conversation_id', conversationIds);
+    final clearByConversation = {
+      for (final row in clearRows)
+        row['conversation_id'] as String: DateTime.parse(row['cleared_at'] as String),
+    };
 
     final profiles = await _client
         .from('profiles')
@@ -50,11 +59,17 @@ class MessagingService {
     return conversations.map((row) {
       final conversationId = row['id'] as String;
       final otherId = row['user_a'] == id ? row['user_b'] as String : row['user_a'] as String;
+      final latest = latestByConversation[conversationId];
+      final latestAt = DateTime.tryParse(latest?['created_at'] as String? ?? '');
+      final clearedAt = clearByConversation[conversationId];
+      final visibleLatest = clearedAt != null && latestAt != null && !latestAt.isAfter(clearedAt)
+          ? null
+          : latest;
       return {
         ...row,
         'other_user_id': otherId,
         'other_profile': profileById[otherId],
-        'latest_message': latestByConversation[conversationId],
+        'latest_message': visibleLatest,
       };
     }).where((row) => row['other_profile'] != null).toList();
   }
