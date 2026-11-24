@@ -119,7 +119,7 @@ class _CallScreenState extends State<CallScreen> {
   Future<void> connect() async {
     try {
       if (_credentials.token.isEmpty) {
-        if (mounted) setState(() { connecting = true; connected = false; });
+        if (mounted) { setState(() { connecting = true; connected = false; }); }
         await CallService.instance.waitForAcceptance(_credentials.callId);
         if (!mounted || ending) { return; }
         _credentials = await CallService.instance.joinCall(_credentials.callId);
