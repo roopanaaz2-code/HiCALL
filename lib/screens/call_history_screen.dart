@@ -62,7 +62,7 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
   }
 
   Future<void> _clearHistory() async {
-    if (_calls.isEmpty) return;
+    if (_calls.isEmpty) { return; }
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -74,13 +74,13 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
         ],
       ),
     );
-    if (confirmed != true) return;
+    if (confirmed != true) { return; }
     try {
       await CallHistoryService.instance.clear();
-      if (mounted) setState(() => _calls = []);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your call history was cleared.')));
+      if (mounted) { setState(() => _calls = []); }
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your call history was cleared.'))); }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')))); }
     }
   }
 
@@ -115,9 +115,8 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
                     ),
                   ],
                 ),
-                if (_error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(_error!, style: TextStyle(color: colors.error))),
-                if (_calls.isEmpty && !_loading)
-                  Padding(
+                _error != null ? Padding(padding: const EdgeInsets.only(top: 12), child: Text(_error!, style: TextStyle(color: colors.error))) : const SizedBox.shrink(),
+                _calls.isEmpty && !_loading ? Padding(
                     padding: const EdgeInsets.symmetric(vertical: 42, horizontal: 18),
                     child: Column(children: [
                       Icon(Icons.call_outlined, size: 38, color: colors.primary),
@@ -128,7 +127,7 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
                       const SizedBox(height: 16),
                       FilledButton.icon(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ContactsScreen())), icon: const Icon(Icons.people_outline), label: const Text('Find contacts')),
                     ]),
-                  ),
+                  ) : const SizedBox.shrink(),
                 ..._calls.map((call) {
                   final profile = Map<String, dynamic>.from(call['other_profile'] as Map);
                   final isVideo = call['call_type'] == 'video';
