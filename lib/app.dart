@@ -4,6 +4,9 @@ import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'services/remote_config_service.dart';
 
+Widget _backgroundFallback(BuildContext context, Object error, StackTrace? stackTrace) =>
+    const ColoredBox(color: Color(0xFF071326));
+
 class HiCallApp extends StatelessWidget {
   const HiCallApp({super.key});
 
@@ -24,7 +27,7 @@ class HiCallApp extends StatelessWidget {
       useMaterial3: true,
       brightness: brightness,
       colorScheme: scheme,
-      scaffoldBackgroundColor: page,
+      scaffoldBackgroundColor: Colors.transparent,
       appBarTheme: AppBarTheme(
         backgroundColor: page,
         foregroundColor: isDark ? Colors.white : const Color(0xFF14243B),
@@ -92,6 +95,19 @@ class HiCallApp extends StatelessWidget {
             return Stack(
               fit: StackFit.expand,
               children: [
+                const Positioned.fill(
+                  child: ColoredBox(color: Color(0xFF071326)),
+                ),
+                const Positioned.fill(
+                  child: Image(
+                    image: NetworkImage('https://vytsirlyzeudwbjymthv.supabase.co/storage/v1/object/public/hicall-avatars/hicall_assests/file_0000000030608208b214178208b745c3.png'),
+                    fit: BoxFit.cover,
+                    errorBuilder: _backgroundFallback,
+                  ),
+                ),
+                const Positioned.fill(
+                  child: ColoredBox(color: Color(0x66051020)),
+                ),
                 ?child,
                 if (announcementEnabled &&
                     announcement is String &&
