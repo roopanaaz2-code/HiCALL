@@ -5,86 +5,6 @@ import 'screens/login_screen.dart';
 import 'services/remote_config_service.dart';
 
 
-class _GlowingButtonTheme extends StatefulWidget {
-  const _GlowingButtonTheme({required this.child});
-
-  final Widget child;
-
-  @override
-  State<_GlowingButtonTheme> createState() => _GlowingButtonThemeState();
-}
-
-class _GlowingButtonThemeState extends State<_GlowingButtonTheme>
-    with SingleTickerProviderStateMixin {
-  static const _electricBlue = Color(0xFF168BFF);
-  static const _warmGold = Color(0xFFFFC247);
-
-  late final AnimationController _glowController;
-
-  @override
-  void initState() {
-    super.initState();
-    _glowController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 9),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _glowController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-        animation: _glowController,
-        builder: (context, _) {
-          final glow = Color.lerp(
-            _electricBlue,
-            _warmGold,
-            Curves.easeInOut.transform(_glowController.value),
-          )!;
-          final buttonStyle = ButtonStyle(
-            backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
-            foregroundColor: const WidgetStatePropertyAll(Colors.white),
-            shadowColor: WidgetStatePropertyAll(glow),
-            elevation: const WidgetStatePropertyAll(7),
-            overlayColor: WidgetStatePropertyAll(glow.withValues(alpha: 0.14)),
-            side: WidgetStatePropertyAll(
-              BorderSide(color: glow.withValues(alpha: 0.82), width: 1.1),
-            ),
-            shape: WidgetStatePropertyAll(
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            ),
-          );
-
-          return Theme(
-            data: Theme.of(context).copyWith(
-              elevatedButtonTheme: ElevatedButtonThemeData(style: buttonStyle),
-              filledButtonTheme: FilledButtonThemeData(style: buttonStyle),
-              outlinedButtonTheme: OutlinedButtonThemeData(style: buttonStyle),
-              textButtonTheme: TextButtonThemeData(style: buttonStyle),
-              iconButtonTheme: IconButtonThemeData(style: buttonStyle),
-              floatingActionButtonTheme: FloatingActionButtonThemeData(
-                backgroundColor: Colors.transparent,
-                foregroundColor: Colors.white,
-                elevation: 7,
-                focusElevation: 9,
-                hoverElevation: 9,
-                highlightElevation: 10,
-                splashColor: glow.withValues(alpha: 0.16),
-                shape: CircleBorder(
-                  side: BorderSide(color: glow.withValues(alpha: 0.82), width: 1.1),
-                ),
-              ),
-            ),
-            child: widget.child,
-          );
-        },
-      );
-}
-
 Widget _backgroundFallback(BuildContext context, Object error, StackTrace? stackTrace) =>
     const ColoredBox(color: Color(0xFF071326));
 
@@ -189,7 +109,7 @@ class HiCallApp extends StatelessWidget {
                 const Positioned.fill(
                   child: ColoredBox(color: Color(0x66051020)),
                 ),
-                _GlowingButtonTheme(child: child ?? const SizedBox.shrink()),
+                child ?? const SizedBox.shrink(),
                 if (announcementEnabled &&
                     announcement is String &&
                     announcement.trim().isNotEmpty &&
