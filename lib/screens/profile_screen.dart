@@ -329,10 +329,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Card(
             margin: EdgeInsets.zero,
             child: ListTile(
-              leading: Icon(Icons.mail_outline_rounded, color: colors.primary),
+              leading: Icon(Icons.alternate_email_rounded, color: colors.primary),
               title: const Text('Contact us'),
               subtitle: const Text('roopanaaz2@gmail.com'),
-              trailing: const Icon(Icons.copy_rounded),
               onTap: () async {
                 await Clipboard.setData(const ClipboardData(text: 'roopanaaz2@gmail.com'));
                 if (context.mounted) {
