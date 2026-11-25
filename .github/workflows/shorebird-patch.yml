@@ -167,5 +167,8 @@ jobs:
       - name: Resolve packages
         run: flutter pub get
 
+      - name: Generate launcher icons exactly as in installed release build
+        run: dart run flutter_launcher_icons
+
       - name: Publish Shorebird patch
         run: shorebird patch android --release-version "$RELEASE_VERSION" --track "$PATCH_TRACK"
