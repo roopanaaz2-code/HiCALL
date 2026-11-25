@@ -58,7 +58,6 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
     if (confirmed != true || !mounted) return;
 
     setState(() { _clearing = true; _error = null; });
-    final clearRequest = CallHistoryService.instance.clear();
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -66,7 +65,7 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
     );
 
     try {
-      await clearRequest;
+      await CallHistoryService.instance.clear();
       if (!mounted) return;
       setState(() => _calls = []);
       ScaffoldMessenger.of(context).showSnackBar(
