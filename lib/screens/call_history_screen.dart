@@ -15,6 +15,7 @@ class CallHistoryScreen extends StatefulWidget {
 class _CallHistoryScreenState extends State<CallHistoryScreen> {
   List<Map<String, dynamic>> _calls = [];
   bool _loading = true;
+  bool _clearing = false;
   String? _error;
 
   @override
@@ -32,6 +33,54 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
       if (mounted) { setState(() => _error = 'Call history is temporarily unavailable.'); }
     } finally {
       if (mounted) { setState(() => _loading = false); }
+    }
+  }
+
+  Future<void> _clearHistory() async {
+    if (_calls.isEmpty || _clearing) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Permanently clear call history?'),
+        content: const Text(
+          'All call entries will be removed from your HiCALL history and will stay cleared after reopening the app. Other participants keep their own call history.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFB83245), foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Clear permanently'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() { _clearing = true; _error = null; });
+    final clearRequest = CallHistoryService.instance.clear();
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const _ClearCallHistoryAnimation(),
+    );
+
+    try {
+      await clearRequest;
+      if (!mounted) return;
+      setState(() => _calls = []);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Call history permanently cleared for your account.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      await _load();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not clear call history: ${e.toString().replaceFirst('Exception: ', '')}')),
+      );
+    } finally {
+      if (mounted) setState(() => _clearing = false);
     }
   }
 
@@ -82,7 +131,17 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
               children: [
-                Text('Recent calls', style: TextStyle(color: colors.onSurfaceVariant)),
+                Row(
+                  children: [
+                    Expanded(child: Text('Recent calls', style: TextStyle(color: colors.onSurfaceVariant))),
+                    if (_calls.isNotEmpty)
+                      IconButton(
+                        tooltip: 'Clear call history permanently',
+                        onPressed: _clearing ? null : _clearHistory,
+                        icon: const Icon(Icons.delete_sweep_outlined, color: Color(0xFFFFC247)),
+                      ),
+                  ],
+                ),
                 if (_error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(_error!, style: TextStyle(color: colors.error))),
                 if (_calls.isEmpty && !_loading)
                   Padding(
@@ -123,6 +182,149 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
                 }),
               ],
             ),
+    );
+  }
+}
+
+class _ClearCallHistoryAnimation extends StatefulWidget {
+  const _ClearCallHistoryAnimation();
+
+  @override
+  State<_ClearCallHistoryAnimation> createState() => _ClearCallHistoryAnimationState();
+}
+
+class _ClearCallHistoryAnimationState extends State<_ClearCallHistoryAnimation>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 2600))
+      ..forward();
+    Future<void>.delayed(const Duration(milliseconds: 2850), () {
+      if (mounted) Navigator.of(context).pop();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Widget _page(double start, double end, double rotation, double size) {
+    final flight = CurvedAnimation(
+      parent: _controller,
+      curve: Interval(start, end, curve: Curves.easeInCubic),
+    );
+    return AnimatedBuilder(
+      animation: flight,
+      builder: (context, child) {
+        final t = flight.value;
+        return Transform.translate(
+          offset: Offset((t - 0.5) * rotation * 32, -t * 190),
+          child: Transform.rotate(
+            angle: rotation * t,
+            child: Opacity(
+              opacity: (1 - t).clamp(0.0, 1.0),
+              child: child,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        width: size,
+        height: size * 1.24,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF4F7FC),
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(color: const Color(0xFFB7C6D8)),
+          boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 12, offset: Offset(0, 5))],
+        ),
+        child: Column(
+          children: [
+            const Icon(Icons.call_rounded, color: Color(0xFF1678E8), size: 19),
+            const SizedBox(height: 8),
+            Container(height: 4, decoration: BoxDecoration(color: const Color(0xFF9EADBF), borderRadius: BorderRadius.circular(4))),
+            const SizedBox(height: 5),
+            Container(height: 4, width: size * .58, decoration: BoxDecoration(color: const Color(0xFFD0D9E4), borderRadius: BorderRadius.circular(4))),
+            const Spacer(),
+            const Align(alignment: Alignment.bottomRight, child: Icon(Icons.phone_in_talk, size: 13, color: Color(0xFF8796A8))),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: const Color(0xFF0B172A),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: const BorderSide(color: Color(0xFF28517B))),
+      child: SizedBox(
+        height: 330,
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, _) {
+            final broken = _controller.value > .78;
+            final crackProgress = ((_controller.value - .78) / .22).clamp(0.0, 1.0);
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('Clearing call history', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 174,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned(top: 8, left: 58, child: _page(.02, .55, -1.0, 58)),
+                      Positioned(top: 18, left: 104, child: _page(.12, .68, 1.0, 58)),
+                      Positioned(top: 4, right: 104, child: _page(.22, .78, -0.8, 58)),
+                      Positioned(top: 20, right: 58, child: _page(.30, .86, 0.9, 58)),
+                      Positioned(
+                        bottom: 0,
+                        child: Transform.rotate(
+                          angle: broken ? (crackProgress - .5) * .22 : 0,
+                          child: Transform.scale(
+                            scale: broken ? 1 - crackProgress * .16 : 1,
+                            child: Icon(
+                              broken ? Icons.delete_forever_rounded : Icons.delete_outline_rounded,
+                              size: 76,
+                              color: broken ? Color.lerp(const Color(0xFFFFC247), const Color(0xFFFF5266), crackProgress) : const Color(0xFF45B7FF),
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (broken)
+                        Positioned(
+                          bottom: 10,
+                          left: 82,
+                          child: Transform.rotate(angle: -.45 * crackProgress, child: const Icon(Icons.broken_image_outlined, color: Color(0xFFFFC247), size: 22)),
+                        ),
+                      if (broken)
+                        Positioned(
+                          bottom: 12,
+                          right: 82,
+                          child: Transform.rotate(angle: .5 * crackProgress, child: const Icon(Icons.broken_image_outlined, color: Color(0xFFFFC247), size: 22)),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  broken ? 'Bin broken. History cleared.' : 'Call log pages are flying into the bin…',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
     );
   }
 }
