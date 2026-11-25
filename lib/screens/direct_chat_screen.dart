@@ -117,11 +117,11 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Clear this chat?'),
-        content: const Text('This hides existing messages from your account only. The other person keeps their chat history.'),
+        title: const Text('Permanently clear chat history?'),
+        content: const Text('All messages sent before this clear will stay hidden from your account, including after you close and reopen HiCALL. The other person keeps their own history.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Clear for me')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Clear history permanently')),
         ],
       ),
     );
@@ -134,7 +134,7 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
         _messages.clear();
         _messageIds.clear();
       });
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Chat cleared for your account.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Chat history permanently cleared for your account.')));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -190,7 +190,7 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
             tooltip: 'Chat options',
             onSelected: (value) { if (value == 'clear') _clearChat(); },
             itemBuilder: (_) => const [
-              PopupMenuItem(value: 'clear', child: Text('Clear chat for me')),
+              PopupMenuItem(value: 'clear', child: Text('Clear chat history permanently')),
             ],
           ),
           IconButton(tooltip: 'Audio call', onPressed: () => _startCall('audio'), icon: const Icon(Icons.call_rounded)),
