@@ -168,7 +168,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     _MessageBanner(text: notice!, isError: false),
                   ],
                   const SizedBox(height: 20),
-                  ElevatedButton(
+                  _AccessGlowButton(
                     onPressed: busy ? null : submit,
                     child: busy
                         ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
@@ -227,4 +227,70 @@ class _MessageBanner extends StatelessWidget {
       ),
     );
   }
+}
+
+
+class _AccessGlowButton extends StatefulWidget {
+  const _AccessGlowButton({required this.onPressed, required this.child});
+
+  final VoidCallback? onPressed;
+  final Widget child;
+
+  @override
+  State<_AccessGlowButton> createState() => _AccessGlowButtonState();
+}
+
+class _AccessGlowButtonState extends State<_AccessGlowButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 8),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) {
+          final glow = Color.lerp(
+            const Color(0xFF168BFF),
+            const Color(0xFFFFC247),
+            Curves.easeInOut.transform(_controller.value),
+          )!;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: double.infinity,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: glow.withValues(alpha: 0.9), width: 1.2),
+              boxShadow: [
+                BoxShadow(color: glow.withValues(alpha: 0.32), blurRadius: 16, spreadRadius: 1),
+              ],
+            ),
+            child: ElevatedButton(
+              onPressed: widget.onPressed,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                elevation: 0,
+                foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(52),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              child: widget.child,
+            ),
+          );
+        },
+      );
 }
