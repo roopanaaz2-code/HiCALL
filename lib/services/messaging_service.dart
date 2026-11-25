@@ -124,15 +124,30 @@ class MessagingService {
       params: {'p_conversation_id': conversationId},
     );
     if (result is! String) { throw Exception('Unable to confirm chat clear time.'); }
-    return DateTime.parse(result);
+    final returnedAt = DateTime.parse(result).toUtc();
+    // Read the server marker back so the UI only reports success after the
+    // per-user clear timestamp is durably stored in Supabase.
+    final persistedAt = await clearTime(conversationId);
+    if (persistedAt == null || persistedAt.toUtc().isBefore(returnedAt)) {
+      throw Exception('Chat clear could not be verified. Please try again.');
+    }
+    return persistedAt.toUtc();
   }
 
   Future<List<Map<String, dynamic>>> listMessages(String conversationId, {DateTime? after}) async {
+    // Always apply the persistent server-side marker, even if a future
+    // caller forgets to pass an explicit cutoff.
+    final persistedClearAt = await clearTime(conversationId);
+    DateTime? cutoff = after?.toUtc();
+    if (persistedClearAt != null &&
+        (cutoff == null || persistedClearAt.toUtc().isAfter(cutoff))) {
+      cutoff = persistedClearAt.toUtc();
+    }
     var query = _client
         .from('messages')
         .select('id, conversation_id, sender_id, body, created_at')
         .eq('conversation_id', conversationId);
-    if (after != null) { query = query.gt('created_at', after.toUtc().toIso8601String()); }
+    if (cutoff != null) { query = query.gt('created_at', cutoff.toIso8601String()); }
     final rows = await query
         .order('created_at', ascending: true)
         .limit(500);
