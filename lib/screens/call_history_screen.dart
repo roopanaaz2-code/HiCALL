@@ -137,7 +137,7 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
                       IconButton(
                         tooltip: 'Clear call history permanently',
                         onPressed: _clearing ? null : _clearHistory,
-                        icon: const Icon(Icons.delete_sweep_outlined, color: Color(0xFFFFC247)),
+                        icon: const CustomPaint(size: Size(24, 24), painter: _BinPainter(color: Color(0xFFFFC247))),
                       ),
                   ],
                 ),
@@ -244,13 +244,13 @@ class _ClearCallHistoryAnimationState extends State<_ClearCallHistoryAnimation>
         ),
         child: Column(
           children: [
-            const Icon(Icons.call_rounded, color: Color(0xFF1678E8), size: 19),
+            const Icon(Icons.call_outlined, color: Color(0xFF1678E8), size: 19),
             const SizedBox(height: 8),
             Container(height: 4, decoration: BoxDecoration(color: const Color(0xFF9EADBF), borderRadius: BorderRadius.circular(4))),
             const SizedBox(height: 5),
             Container(height: 4, width: size * .58, decoration: BoxDecoration(color: const Color(0xFFD0D9E4), borderRadius: BorderRadius.circular(4))),
             const Spacer(),
-            const Align(alignment: Alignment.bottomRight, child: Icon(Icons.phone_in_talk, size: 13, color: Color(0xFF8796A8))),
+            const Align(alignment: Alignment.bottomRight, child: Icon(Icons.call_outlined, size: 13, color: Color(0xFF8796A8))),
           ],
         ),
       ),
@@ -290,10 +290,15 @@ class _ClearCallHistoryAnimationState extends State<_ClearCallHistoryAnimation>
                           angle: broken ? (crackProgress - .5) * .22 : 0,
                           child: Transform.scale(
                             scale: broken ? 1 - crackProgress * .16 : 1,
-                            child: Icon(
-                              broken ? Icons.delete_forever_rounded : Icons.delete_outline_rounded,
-                              size: 76,
-                              color: broken ? Color.lerp(const Color(0xFFFFC247), const Color(0xFFFF5266), crackProgress) : const Color(0xFF45B7FF),
+                            child: CustomPaint(
+                              size: const Size(76, 76),
+                              painter: _BinPainter(
+                                color: broken
+                                    ? Color.lerp(const Color(0xFFFFC247), const Color(0xFFFF5266), crackProgress)!
+                                    : const Color(0xFF45B7FF),
+                                broken: broken,
+                                progress: crackProgress,
+                              ),
                             ),
                           ),
                         ),
@@ -302,13 +307,13 @@ class _ClearCallHistoryAnimationState extends State<_ClearCallHistoryAnimation>
                         Positioned(
                           bottom: 10,
                           left: 82,
-                          child: Transform.rotate(angle: -.45 * crackProgress, child: const Icon(Icons.broken_image_outlined, color: Color(0xFFFFC247), size: 22)),
+                          child: Transform.rotate(angle: -.45 * crackProgress, child: const _Shard()),
                         ),
                       if (broken)
                         Positioned(
                           bottom: 12,
                           right: 82,
-                          child: Transform.rotate(angle: .5 * crackProgress, child: const Icon(Icons.broken_image_outlined, color: Color(0xFFFFC247), size: 22)),
+                          child: Transform.rotate(angle: .5 * crackProgress, child: const _Shard()),
                         ),
                     ],
                   ),
@@ -326,4 +331,89 @@ class _ClearCallHistoryAnimationState extends State<_ClearCallHistoryAnimation>
       ),
     );
   }
+}
+
+
+class _Shard extends StatelessWidget {
+  const _Shard();
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+        size: const Size(22, 22),
+        painter: _BinShardPainter(),
+      );
+}
+
+class _BinShardPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFFFFC247)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.2
+      ..strokeCap = StrokeCap.round;
+    final path = Path()
+      ..moveTo(size.width * .18, size.height * .82)
+      ..lineTo(size.width * .48, size.height * .16)
+      ..lineTo(size.width * .82, size.height * .72)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _BinPainter extends CustomPainter {
+  const _BinPainter({
+    required this.color,
+    this.broken = false,
+    this.progress = 0,
+  });
+
+  final Color color;
+  final bool broken;
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final stroke = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = size.width * .055
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final fill = Paint()
+      ..color = color.withValues(alpha: .12)
+      ..style = PaintingStyle.fill;
+    final body = Path()
+      ..moveTo(size.width * .22, size.height * .29)
+      ..lineTo(size.width * .29, size.height * .88)
+      ..quadraticBezierTo(size.width * .5, size.height * .96, size.width * .71, size.height * .88)
+      ..lineTo(size.width * .78, size.height * .29)
+      ..close();
+    canvas.drawPath(body, fill);
+    canvas.drawPath(body, stroke);
+    canvas.drawLine(Offset(size.width * .15, size.height * .25), Offset(size.width * .85, size.height * .25), stroke);
+    canvas.drawLine(Offset(size.width * .38, size.height * .17), Offset(size.width * .62, size.height * .17), stroke);
+    canvas.drawLine(Offset(size.width * .42, size.height * .39), Offset(size.width * .44, size.height * .77), stroke);
+    canvas.drawLine(Offset(size.width * .58, size.height * .39), Offset(size.width * .56, size.height * .77), stroke);
+    if (broken) {
+      final crack = Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = size.width * .045
+        ..strokeCap = StrokeCap.round;
+      final path = Path()
+        ..moveTo(size.width * .5, size.height * .28)
+        ..lineTo(size.width * (.43 - .05 * progress), size.height * .48)
+        ..lineTo(size.width * .56, size.height * .58)
+        ..lineTo(size.width * (.46 + .08 * progress), size.height * .82);
+      canvas.drawPath(path, crack);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _BinPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.broken != broken || oldDelegate.progress != progress;
 }
