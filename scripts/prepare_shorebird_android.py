@@ -8,6 +8,11 @@ def add_repository(path: Path) -> None:
     if not path.exists():
         return
     text = path.read_text()
+    # Avoid Maven Central's rate-limited endpoint in CI. Route every direct
+    # mavenCentral() repository declaration through Google's Maven Central mirror.
+    text = text.replace("mavenCentral()", MIRROR)
+    # Also put the mirror first so plugin transitive dependencies resolve there
+    # before Gradle Plugin Portal fallback is considered.
     if "maven-central-eu.storage-download.googleapis.com" not in text:
         text = text.replace("repositories {", "repositories {\n        " + MIRROR, 1)
     path.write_text(text)
