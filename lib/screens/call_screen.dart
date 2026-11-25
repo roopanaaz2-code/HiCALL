@@ -137,7 +137,7 @@ class _CallScreenState extends State<CallScreen> {
       }
       if (!mounted || ending) return;
 
-      await room.connect(widget.credentials.serverUrl, widget.credentials.token);
+      await room.connect(widget.credentials.serverUrl, widget.credentials.token).timeout(const Duration(seconds: 25));
       if (!mounted || ending) {
         try {
           await room.disconnect();
@@ -174,10 +174,20 @@ class _CallScreenState extends State<CallScreen> {
         connecting = false;
         connected = false;
       });
-    } catch (_) {
+    } catch (e) {
+      try {
+        await room.disconnect();
+      } catch (_) {}
       if (!mounted) return;
+      final details = e
+          .toString()
+          .replaceAll(RegExp(r'Bearer\s+\S+', caseSensitive: false), 'Bearer [hidden]')
+          .replaceAll(RegExp(r'eyJ[A-Za-z0-9_.-]+'), '[hidden token]')
+          .replaceFirst('Exception: ', '')
+          .trim();
+      final shortDetails = details.length > 150 ? details.substring(0, 150) : details;
       setState(() {
-        error = 'Could not connect to the call. Check your internet connection and try again.';
+        error = 'Call connection failed (${e.runtimeType}). $shortDetails';
         connecting = false;
         connected = false;
         reconnecting = false;
