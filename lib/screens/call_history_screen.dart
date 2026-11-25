@@ -227,7 +227,7 @@ class _ClearCallHistoryAnimationState extends State<_ClearCallHistoryAnimation>
           child: Transform.rotate(
             angle: rotation * t,
             child: Opacity(
-              opacity: (1 - t).clamp(0.0, 1.0),
+              opacity: (1 - t).clamp(0.0, 1.0).toDouble(),
               child: child,
             ),
           ),
@@ -269,7 +269,7 @@ class _ClearCallHistoryAnimationState extends State<_ClearCallHistoryAnimation>
           animation: _controller,
           builder: (context, _) {
             final broken = _controller.value > .78;
-            final crackProgress = ((_controller.value - .78) / .22).clamp(0.0, 1.0);
+            final crackProgress = ((_controller.value - .78) / .22).clamp(0.0, 1.0).toDouble();
             return Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
